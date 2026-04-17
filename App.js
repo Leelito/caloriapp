@@ -1397,7 +1397,7 @@ function OnboardingModal({visible,onDone}){
 }
 
 const s = StyleSheet.create({
-  safe: { flex:1, backgroundColor:C.bg },
+  safe: { flex:1, backgroundColor:C.bg, paddingTop: Platform.OS==='android' ? StatusBar.currentHeight||24 : 0 },
   scroll: { flex:1 },
   scrollContent: { paddingTop:12 },
   logo: { fontSize:24, fontWeight:'800', color:C.text, letterSpacing:1, fontStyle:'italic', textShadowColor:'rgba(240,242,245,0.15)', textShadowOffset:{width:1,height:2}, textShadowRadius:4 },
