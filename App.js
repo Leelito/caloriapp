@@ -254,7 +254,7 @@ export default function App(){
   const [showPaywall,setShowPaywall]=useState(false);
   const [showMacroModal,setShowMacroModal]=useState(null); // 'protein'|'carbs'|'fat'
   const [dailyAnalyses,setDailyAnalyses]=useState(0);
-  const DAILY_LIMIT=6;
+  const DAILY_LIMIT=10;
   const isDev=devCode==='Jcg12345';
   function isUnlimited(){ return isDev; }
   const t=TR[lang]||TR.es;
