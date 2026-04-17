@@ -765,7 +765,7 @@ Formato: {"name":"nombre (máx 40 chars)","desc":"ingredientes (máx 60 chars)",
       </TouchableOpacity>
 
       {/* ── ADD MODAL ─────────────────────────────────────── */}
-      <Modal visible={showAdd} animationType="slide" transparent onRequestClose={()=>{setShowAdd(false);resetAdd();setEditingEntryIdx(null);}}>
+      <Modal visible={showAdd} animationType="slide" transparent onRequestClose={()=>{setShowAdd(false);resetAdd();setEditingEntryIdx(null);}} hardwareAccelerated={true}>
         <TouchableOpacity style={s.overlay} activeOpacity={1} onPress={()=>{setShowAdd(false);resetAdd();setEditingEntryIdx(null);}}>
           <KeyboardAvoidingView behavior={Platform.OS==='ios'?'padding':'height'} style={{width:'100%'}}>
             <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
@@ -841,7 +841,6 @@ Formato: {"name":"nombre (máx 40 chars)","desc":"ingredientes (máx 60 chars)",
               {addStep==='analyzing' && (
                 <>
                   <Text style={s.sheetTitle}>{t.analyzing}</Text>
-                  <Text style={{fontSize:13,color:C.muted,marginBottom:24}}>{t.analyzing}</Text>
                   <View style={{flexDirection:'row',alignItems:'center',backgroundColor:C.card,borderRadius:16,padding:20,gap:16}}>
                     <ActivityIndicator color={C.lime} size="large"/>
                     <View>
