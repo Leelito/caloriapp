@@ -34,8 +34,9 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "YOUR_PROJECT_ID"
+        "projectId": "42ae6734-7e1f-4850-bafd-b9b03f80bd5d"
       }
-    }
+    },
+    "owner": "jaboncillo"
   }
 }
