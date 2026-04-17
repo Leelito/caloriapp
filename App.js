@@ -764,16 +764,18 @@ export default function App(){
       </TouchableOpacity>
 
       {/* ── ADD MODAL ─────────────────────────────────────── */}
-      <Modal visible={showAdd} animationType="slide" transparent onRequestClose={()=>{setShowAdd(false);resetAdd();setEditingEntryIdx(null);}} hardwareAccelerated={true}>
-        <TouchableOpacity style={s.overlay} activeOpacity={1} onPress={()=>{setShowAdd(false);resetAdd();setEditingEntryIdx(null);}}>
-          <KeyboardAvoidingView behavior={Platform.OS==='ios'?'padding':'height'} style={{width:'100%'}}>
-            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-              <View style={[s.sheet,{maxHeight:'92%',flex:1}]} onStartShouldSetResponder={()=>true} onTouchEnd={e=>e.stopPropagation()}>
-                <TouchableOpacity activeOpacity={1} onPress={()=>{setShowAdd(false);resetAdd();}} style={{alignItems:'center',paddingBottom:4}}>
-                  <View style={s.handle}/>
+      <Modal visible={showAdd} animationType="slide" transparent={false} onRequestClose={()=>{setShowAdd(false);resetAdd();setEditingEntryIdx(null);}} hardwareAccelerated={true}>
+        <KeyboardAvoidingView behavior={Platform.OS==='ios'?'padding':'height'} style={{flex:1,backgroundColor:C.surface}}>
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <View style={{flex:1,padding:24,paddingTop:Platform.OS==='ios'?60:40}} onStartShouldSetResponder={()=>true}>
+              <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+                <View style={{width:40,height:4,backgroundColor:C.border,borderRadius:99}}/>
+                <TouchableOpacity onPress={()=>{setShowAdd(false);resetAdd();setEditingEntryIdx(null);}}>
+                  <Text style={{fontSize:14,color:C.muted}}>✕</Text>
                 </TouchableOpacity>
+              </View>
 
-              <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{paddingBottom:40}}>
+              <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
               {addStep==='upload' && (
                 <>
                   {editingEntryIdx!==null && (
@@ -906,9 +908,8 @@ export default function App(){
               )}
               </ScrollView>
             </View>
-            </TouchableWithoutFeedback>
-          </KeyboardAvoidingView>
-        </TouchableOpacity>
+          </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* ── HISTORY PANEL — Animated, no Modal para no bloquear alerts ── */}
