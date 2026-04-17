@@ -774,6 +774,7 @@ Formato: {"name":"nombre (máx 40 chars)","desc":"ingredientes (máx 60 chars)",
                   <View style={s.handle}/>
                 </TouchableOpacity>
 
+              <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
               {addStep==='upload' && (
                 <>
                   {editingEntryIdx!==null && (
@@ -904,6 +905,7 @@ Formato: {"name":"nombre (máx 40 chars)","desc":"ingredientes (máx 60 chars)",
                   </TouchableOpacity>
                 </>
               )}
+              </ScrollView>
             </View>
             </TouchableWithoutFeedback>
           </KeyboardAvoidingView>
