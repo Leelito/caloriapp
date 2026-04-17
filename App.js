@@ -765,7 +765,7 @@ export default function App(){
 
       {/* ── ADD MODAL ─────────────────────────────────────── */}
       <Modal visible={showAdd} animationType="slide" transparent onRequestClose={()=>{setShowAdd(false);resetAdd();setEditingEntryIdx(null);}} hardwareAccelerated={true}>
-        <TouchableOpacity style={[s.overlay,{justifyContent:'flex-end'}]} activeOpacity={1} onPress={()=>{setShowAdd(false);resetAdd();setEditingEntryIdx(null);}}>
+        <TouchableOpacity style={s.overlay} activeOpacity={1} onPress={()=>{setShowAdd(false);resetAdd();setEditingEntryIdx(null);}}>
           <KeyboardAvoidingView behavior={Platform.OS==='ios'?'padding':'height'} style={{width:'100%'}}>
             <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
               <View style={[s.sheet,{maxHeight:'92%',flex:1}]} onStartShouldSetResponder={()=>true} onTouchEnd={e=>e.stopPropagation()}>
