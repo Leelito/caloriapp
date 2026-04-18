@@ -1207,51 +1207,53 @@ export default function App(){
       )}
 
       {/* ── EDIT MEAL MODAL ─────────────────────────────────── */}
-      <Modal visible={showEditMeal} animationType="slide" transparent onRequestClose={()=>setShowEditMeal(false)}>
-        <TouchableOpacity style={s.overlay} activeOpacity={1} onPress={()=>setShowEditMeal(false)}>
-          <KeyboardAvoidingView behavior={Platform.OS==='ios'?'padding':'height'} style={{width:'100%'}}>
-            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-              <View style={[s.sheet,{maxHeight:'85%'}]} onStartShouldSetResponder={()=>true} onTouchEnd={e=>e.stopPropagation()}>
-                <View style={s.handle}/>
-                <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-                  <Text style={s.sheetTitle}>{t.editMeal}</Text>
-                  <Text style={{fontSize:13,color:C.muted,marginBottom:16,lineHeight:20}}>{t.editMealSub}</Text>
-                  <Text style={{fontSize:12,color:C.muted,marginBottom:8}}>Alimento actual:</Text>
-                  <View style={{backgroundColor:C.card,borderRadius:12,padding:12,marginBottom:16,flexDirection:'row',alignItems:'center',gap:10}}>
-                    <Text style={{fontSize:20}}>{editMealData.emoji||'🍽️'}</Text>
-                    <Text style={{fontSize:13,color:C.muted,flex:1}}>{editMealData.name}</Text>
-                  </View>
-                  <Text style={{fontSize:12,color:C.muted,marginBottom:8}}>{t.correction}</Text>
-                  <TextInput
-                    style={{backgroundColor:C.card,borderWidth:1,borderColor:C.border,borderRadius:16,color:C.text,fontSize:14,padding:14,minHeight:100,textAlignVertical:'top',lineHeight:22}}
-                    multiline
-                    scrollEnabled={false}
-                    placeholder={lang==='en'?`E.g.: ${editMealData.name||'describe the corrected food with quantities'}`:` Ej: ${editMealData.name||'describe el alimento corregido con cantidades'}`}
-                    placeholderTextColor={C.muted}
-                    value={editMealData.correction||''}
-                    onChangeText={v=>setEditMealData(prev=>({...prev,correction:v}))}
-                  />
-                  {editMealData.analyzing?(
-                    <View style={{flexDirection:'row',alignItems:'center',gap:12,backgroundColor:C.card,borderRadius:14,padding:16,marginTop:16}}>
-                      <ActivityIndicator color={C.lime}/>
-                      <Text style={{fontSize:13,color:C.muted}}>Recalculando con IA...</Text>
-                    </View>
-                  ):(
-                    <>
-                      <TouchableOpacity style={[s.confirmBtn,{marginTop:16}]} onPress={()=>saveEditMealAI()}>
-                        <Text style={{fontSize:15,fontWeight:'700',color:'#0d0f14'}}>{t.recalculate}</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={s.cancelBtn} onPress={()=>setShowEditMeal(false)}>
-                        <Text style={{fontSize:14,color:C.muted}}>Cancelar</Text>
-                      </TouchableOpacity>
-                    </>
-                  )}
-                  <View style={{height:32}}/>
-                </ScrollView>
+      <Modal visible={showEditMeal} animationType="slide" transparent={false} onRequestClose={()=>setShowEditMeal(false)}>
+        <KeyboardAvoidingView behavior={Platform.OS==='ios'?'padding':'height'} style={{flex:1,backgroundColor:C.surface}}>
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <View style={{flex:1,padding:24,paddingTop:Platform.OS==='ios'?60:40}}>
+              <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
+                <Text style={s.sheetTitle}>{t.editMeal}</Text>
+                <TouchableOpacity onPress={()=>setShowEditMeal(false)}>
+                  <Text style={{fontSize:14,color:C.muted}}>✕</Text>
+                </TouchableOpacity>
               </View>
-            </TouchableWithoutFeedback>
-          </KeyboardAvoidingView>
-        </TouchableOpacity>
+              <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+                <Text style={{fontSize:13,color:C.muted,marginBottom:16,lineHeight:20}}>{t.editMealSub}</Text>
+                <Text style={{fontSize:12,color:C.muted,marginBottom:8}}>{t.currentFood}</Text>
+                <View style={{backgroundColor:C.card,borderRadius:12,padding:12,marginBottom:16,flexDirection:'row',alignItems:'center',gap:10}}>
+                  <Text style={{fontSize:20}}>{editMealData.emoji||'🍽️'}</Text>
+                  <Text style={{fontSize:13,color:C.muted,flex:1}}>{editMealData.name}</Text>
+                </View>
+                <Text style={{fontSize:12,color:C.muted,marginBottom:8}}>{t.correction}</Text>
+                <TextInput
+                  style={{backgroundColor:C.card,borderWidth:1,borderColor:C.border,borderRadius:16,color:C.text,fontSize:14,padding:14,minHeight:100,textAlignVertical:'top',lineHeight:22}}
+                  multiline
+                  scrollEnabled={false}
+                  placeholder={lang==='en'?`E.g.: ${editMealData.name||'describe the corrected food with quantities'}`:`Ej: ${editMealData.name||'describe el alimento corregido con cantidades'}`}
+                  placeholderTextColor={C.muted}
+                  value={editMealData.correction||''}
+                  onChangeText={v=>setEditMealData(prev=>({...prev,correction:v}))}
+                />
+                {editMealData.analyzing?(
+                  <View style={{flexDirection:'row',alignItems:'center',gap:12,backgroundColor:C.card,borderRadius:14,padding:16,marginTop:16}}>
+                    <ActivityIndicator color={C.lime}/>
+                    <Text style={{fontSize:13,color:C.muted}}>{t.recalculating}</Text>
+                  </View>
+                ):(
+                  <>
+                    <TouchableOpacity style={[s.confirmBtn,{marginTop:16}]} onPress={()=>saveEditMealAI()}>
+                      <Text style={{fontSize:15,fontWeight:'700',color:'#0d0f14'}}>{t.recalculate}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={s.cancelBtn} onPress={()=>setShowEditMeal(false)}>
+                      <Text style={{fontSize:14,color:C.muted}}>{t.cancel}</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
+                <View style={{height:32}}/>
+              </ScrollView>
+            </View>
+          </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* ── MACRO DETAIL MODAL ──────────────────────────────── */}
