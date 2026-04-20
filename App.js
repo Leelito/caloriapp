@@ -382,7 +382,7 @@ export default function App(){
   function openEditMeal(idx){
     const m=meals[idx];
     setEditMealIdx(idx);
-    setEditMealData({name:m.name,desc:m.desc||'',emoji:m.emoji||'🍽️',correction:'',analyzing:false});
+    setEditMealData({name:m.name,desc:m.desc||'',emoji:m.emoji||'🍽️',correction:'',analyzing:false,mealType:m.mealType||'breakfast'});
     setShowEditMeal(true);
   }
 
@@ -397,10 +397,12 @@ export default function App(){
       const data=JSON.parse(raw);
       const meal=JSON.parse(data.content.map(b=>b.text||'').join('').replace(/```json|```/gi,'').trim());
       const updated=[...meals];
+      const mt=MEAL_TYPES.find(t=>t.id===editMealData.mealType)||MEAL_TYPES[0];
       updated[editMealIdx]={
         ...updated[editMealIdx],
         name:meal.name, desc:meal.desc, emoji:meal.emoji,
         kcal:meal.kcal, protein:meal.protein, carbs:meal.carbs, fat:meal.fat, portion:meal.portion,
+        mealType:editMealData.mealType, mealTypeLabel:mt.label, mealTypeIcon:mt.icon,
       };
       setMeals(updated); saveMeals(updated);
       setShowEditMeal(false); setEditMealIdx(null);
@@ -1224,6 +1226,19 @@ export default function App(){
                   <Text style={{fontSize:20}}>{editMealData.emoji||'🍽️'}</Text>
                   <Text style={{fontSize:13,color:C.muted,flex:1}}>{editMealData.name}</Text>
                 </View>
+                <Text style={{fontSize:12,color:C.muted,marginBottom:8}}>{t.mealType}</Text>
+                <View style={{flexDirection:'row',flexWrap:'wrap',gap:8,marginBottom:16}}>
+                  {MEAL_TYPES.map(mt=>(
+                    <TouchableOpacity key={mt.id}
+                      onPress={()=>setEditMealData(prev=>({...prev,mealType:mt.id}))}
+                      style={{flexDirection:'row',alignItems:'center',gap:6,paddingVertical:8,paddingHorizontal:12,borderRadius:12,borderWidth:1.5,
+                        borderColor:editMealData.mealType===mt.id?C.lime:C.border,
+                        backgroundColor:editMealData.mealType===mt.id?'rgba(198,241,53,0.1)':C.card}}>
+                      <Text style={{fontSize:14}}>{mt.icon}</Text>
+                      <Text style={{fontSize:12,color:editMealData.mealType===mt.id?C.lime:C.muted,fontWeight:editMealData.mealType===mt.id?'700':'400'}}>{mt.label}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
                 <Text style={{fontSize:12,color:C.muted,marginBottom:8}}>{t.correction}</Text>
                 <TextInput
                   style={{backgroundColor:C.card,borderWidth:1,borderColor:C.border,borderRadius:16,color:C.text,fontSize:14,padding:14,minHeight:100,textAlignVertical:'top',lineHeight:22}}
@@ -1241,8 +1256,20 @@ export default function App(){
                   </View>
                 ):(
                   <>
-                    <TouchableOpacity style={[s.confirmBtn,{marginTop:16}]} onPress={()=>saveEditMealAI()}>
-                      <Text style={{fontSize:15,fontWeight:'700',color:'#0d0f14'}}>{t.recalculate}</Text>
+                    <TouchableOpacity style={[s.confirmBtn,{marginTop:16}]} onPress={()=>{
+                      if(editMealData.correction?.trim()){
+                        saveEditMealAI();
+                      } else {
+                        const mt=MEAL_TYPES.find(t=>t.id===editMealData.mealType)||MEAL_TYPES[0];
+                        const updated=[...meals];
+                        updated[editMealIdx]={...updated[editMealIdx],mealType:editMealData.mealType,mealTypeLabel:mt.label,mealTypeIcon:mt.icon};
+                        setMeals(updated); saveMeals(updated);
+                        setShowEditMeal(false); setEditMealIdx(null); setEditMealData({});
+                      }
+                    }}>
+                      <Text style={{fontSize:15,fontWeight:'700',color:'#0d0f14'}}>
+                        {editMealData.correction?.trim()?t.recalculate:t.save}
+                      </Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={s.cancelBtn} onPress={()=>setShowEditMeal(false)}>
                       <Text style={{fontSize:14,color:C.muted}}>{t.cancel}</Text>
