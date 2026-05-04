@@ -1,4 +1,3 @@
-/* eslint-disable react-native/no-unused-styles */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
@@ -1467,7 +1466,7 @@ export default function App(){
                 <View style={{flexDirection:'row',gap:8}}>
                   {['es','en'].map(l=>(
                     <TouchableOpacity key={l} onPress={()=>{setLang(l);AsyncStorage.setItem('clang',l).catch(()=>{});}}
-                      style={{flex:1,backgroundColor:lang===l?C.lime+'22':C.card,borderRadius:14,padding:14,alignItems:'center',borderWidth:1.5,borderColor:lang===l?C.lime:C.border}}>
+                      style={{flex:1,backgroundColor:lang===l?(darkMode?'rgba(77,159,255,0.13)':'rgba(43,127,255,0.13)'):C.card,borderRadius:14,padding:14,alignItems:'center',borderWidth:1.5,borderColor:lang===l?C.lime:C.border}}>
                       <Text style={{fontSize:20,marginBottom:4}}>{l==='es'?'🇪🇸':'🇬🇧'}</Text>
                       <Text style={{fontSize:13,fontWeight:'700',color:lang===l?C.lime:C.muted}}>{l==='es'?'Español':'English'}</Text>
                     </TouchableOpacity>
