@@ -30,6 +30,12 @@
           "photosPermission": "CaloriApp needs access to your photos to analyze food.",
           "cameraPermission": "CaloriApp needs access to your camera to take food photos."
         }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "CaloriApp needs access to your camera to scan barcodes."
+        }
       ]
     ],
     "extra": {
