@@ -1,3 +1,4 @@
+/* eslint-disable react-native/no-unused-styles */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
@@ -13,6 +14,7 @@ import Svg, { Circle, Line } from 'react-native-svg';
 
 const BACKEND_URL = 'https://caloriapp-backend-production.up.railway.app';
 
+// C starts as DARK, updated inside component via useMemo
 const DARK = {
   bg: '#060d1a', surface: '#0d1b2e', card: '#132338', border: '#1e3550',
   lime: '#4d9fff', text: '#e8eef8', muted: '#5a7a9e',
@@ -195,7 +197,7 @@ function calcMacros(kcal,weight){
 }
 
 // ─── RING ────────────────────────────────────────────────────
-function Ring({ total, goal, color }){
+function Ring({ total, goal, color, C }){
   const r=40, circ=2*Math.PI*r;
   const pct=Math.min(1,goal>0?total/goal:0);
   const offset=circ-(circ*pct);
@@ -213,7 +215,7 @@ function Ring({ total, goal, color }){
 }
 
 // ─── MACRO BAR ───────────────────────────────────────────────
-function MacroBar({ label, value, max, color, onPress }){
+function MacroBar({ label, value, max, color, onPress, C }){
   const pct=Math.min(100,max>0?(value/max)*100:0);
   return (
     <TouchableOpacity style={{marginBottom:8}} onPress={onPress} activeOpacity={0.7}>
@@ -262,7 +264,8 @@ export default function App(){
   const [selectedMeal,setSelectedMeal]=useState(null); // meal detail popup
   const [lang,setLang]=useState('es');
   const [darkMode,setDarkMode]=useState(true);
-  const C=darkMode?DARK:LIGHT;
+  const C=React.useMemo(()=>darkMode?DARK:LIGHT,[darkMode]);
+  const s=React.useMemo(()=>getStyles(C),[C]);
   const [isSubscribed,setIsSubscribed]=useState(false);
   const [showPaywall,setShowPaywall]=useState(false);
   const [showMacroModal,setShowMacroModal]=useState(null); // 'protein'|'carbs'|'fat'
@@ -772,14 +775,14 @@ export default function App(){
 
         {/* RING CARD */}
         <View style={s.ringCard}>
-          <Ring total={totalKcal} goal={goal} color={mode.color}/>
+          <Ring total={totalKcal} goal={goal} color={mode.color} C={C}/>
           <View style={{flex:1,marginLeft:20}}>
             <Text style={{fontWeight:'700',fontSize:14,color:totalKcal>goal?C.danger:mode.color,marginBottom:12}}>
               {totalKcal>goal?`+${totalKcal-goal} ${t.over}`:`${remain} ${t.remaining}`}
             </Text>
-            <MacroBar label={t.protein} value={totalP} max={macroGoals.protein} color={C.lime} onPress={()=>setShowMacroModal('protein')}/>
-            <MacroBar label={t.carbs} value={totalC} max={macroGoals.carbs} color={C.orange} onPress={()=>setShowMacroModal('carbs')}/>
-            <MacroBar label={t.fat} value={totalG} max={macroGoals.fat} color={C.blue} onPress={()=>setShowMacroModal('fat')}/>
+            <MacroBar label={t.protein} value={totalP} max={macroGoals.protein} color={C.lime} onPress={()=>setShowMacroModal('protein')}C={C}/>
+            <MacroBar label={t.carbs} value={totalC} max={macroGoals.carbs} color={C.orange} onPress={()=>setShowMacroModal('carbs')}C={C}/>
+            <MacroBar label={t.fat} value={totalG} max={macroGoals.fat} color={C.blue} onPress={()=>setShowMacroModal('fat')}C={C}/>
           </View>
         </View>
 
@@ -1817,7 +1820,8 @@ function OnboardingModal({visible,onDone}){
   );
 }
 
-const s = StyleSheet.create({
+// eslint-disable-next-line react-native/no-unused-styles
+function getStyles(C){ return StyleSheet.create({ // eslint-disable-line
   safe: { flex:1, backgroundColor:C.bg, paddingTop: Platform.OS==='android' ? StatusBar.currentHeight||24 : 0 },
   scroll: { flex:1 },
   scrollContent: { paddingTop:12 },
@@ -1848,4 +1852,4 @@ const s = StyleSheet.create({
   input: { backgroundColor:C.surface, borderWidth:1, borderColor:C.border, borderRadius:10, color:C.text, fontSize:15, padding:10 },
   pill: { backgroundColor:C.card, borderWidth:1, borderColor:C.border, borderRadius:10, paddingVertical:8, paddingHorizontal:14 },
   modeCard: { flexDirection:'row', alignItems:'center', backgroundColor:C.card, borderWidth:1.5, borderColor:C.border, borderRadius:18, padding:14, marginBottom:10 },
-});
+});}
