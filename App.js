@@ -264,8 +264,8 @@ export default function App(){
   const [selectedMeal,setSelectedMeal]=useState(null); // meal detail popup
   const [lang,setLang]=useState('es');
   const [darkMode,setDarkMode]=useState(true);
-  const C=React.useMemo(()=>darkMode?DARK:LIGHT,[darkMode]);
-  const s=React.useMemo(()=>getStyles(C),[C]);
+  const C=darkMode?DARK:LIGHT;
+  const s=getStyles(C);
   const [isSubscribed,setIsSubscribed]=useState(false);
   const [showPaywall,setShowPaywall]=useState(false);
   const [showMacroModal,setShowMacroModal]=useState(null); // 'protein'|'carbs'|'fat'
@@ -1820,8 +1820,7 @@ function OnboardingModal({visible,onDone}){
   );
 }
 
-// eslint-disable-next-line react-native/no-unused-styles
-function getStyles(C){ return StyleSheet.create({ // eslint-disable-line
+function getStyles(C){ return StyleSheet.create({
   safe: { flex:1, backgroundColor:C.bg, paddingTop: Platform.OS==='android' ? StatusBar.currentHeight||24 : 0 },
   scroll: { flex:1 },
   scrollContent: { paddingTop:12 },
