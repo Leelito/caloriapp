@@ -8,20 +8,28 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
-import Svg, { Circle } from 'react-native-svg';
+import { CameraView, Camera } from 'expo-camera';
+import Svg, { Circle, Line } from 'react-native-svg';
 
 const BACKEND_URL = 'https://caloriapp-backend-production.up.railway.app';
 
-const C = {
-  bg: '#0d0f14', surface: '#161920', card: '#1e2229', border: '#2a2f3a',
-  lime: '#c6f135', text: '#f0f2f5', muted: '#7a8494',
-  danger: '#ff5c5c', orange: '#ff9f43', blue: '#74b9ff',
+const DARK = {
+  bg: '#060d1a', surface: '#0d1b2e', card: '#132338', border: '#1e3550',
+  lime: '#4d9fff', text: '#e8eef8', muted: '#5a7a9e',
+  danger: '#ff6b6b', orange: '#ffa94d', blue: '#74c0fc',
+  accent: '#4d9fff', glow: 'rgba(77,159,255,0.15)',
+};
+const LIGHT = {
+  bg: '#f0f4fb', surface: '#ffffff', card: '#e8eef8', border: '#d0daea',
+  lime: '#2b7fff', text: '#0d1b2e', muted: '#7a95b8',
+  danger: '#e74c3c', orange: '#f39c12', blue: '#2b7fff',
+  accent: '#2b7fff', glow: 'rgba(43,127,255,0.12)',
 };
 
 const MODES_BASE = [
-  { id:'bulk',   icon:'💪', color:'#74b9ff', delta:+400 },
-  { id:'bulk_s', icon:'🏋️', color:'#c6f135', delta:+200 },
-  { id:'maint',  icon:'⚖️', color:'#f0f2f5', delta:0    },
+  { id:'bulk',   icon:'💪', color:'#74c0fc', delta:+400 },
+  { id:'bulk_s', icon:'🏋️', color:'#4d9fff', delta:+200 },
+  { id:'maint',  icon:'⚖️', color:'#e8eef8', delta:0    },
   { id:'cut_s',  icon:'🔥', color:'#ff9f43', delta:-250 },
   { id:'cut',    icon:'⚡', color:'#ff5c5c', delta:-500 },
   { id:'cut_x',  icon:'🎯', color:'#ff3030', delta:-750 },
@@ -42,7 +50,7 @@ const TR = {
     remaining: 'kcal restantes', over: 'kcal de más ⚠️',
     meals: 'comidas', goal: 'objetivo', left: 'restantes',
     logTitle: 'Registro de hoy', history: '📋 Historial', closeDay: '✓ Cerrar día', clear: '🗑 Limpiar',
-    addMeal: 'Añadir comida', photo: '📷 Foto', describe: '✏️ Describir',
+    addMeal: 'Añadir comida', photo: 'Foto', describe: 'Describir',
     analyzing: 'Analizando...', processing: 'Procesando', estimating: 'Estimando calorías y macros...',
     identified: '¡Identificado!', reviewNutri: 'Revisa y confirma el análisis nutricional.',
     addToLog: '✓ Añadir al registro', analyzeOther: 'Analizar otra',
@@ -72,6 +80,7 @@ const TR = {
     currentFood: 'Alimento actual:', correction: 'Corrección:', recalculate: 'Recalcular con IA →',
     emptyToday: 'Aún no has registrado nada hoy.\nAñade tu primera comida.',
     protein: 'Proteína', carbs: 'Carbos', fat: 'Grasa', kcal: 'kcal', prot: 'prot',
+    barcode: 'Código', barcodeHint: 'Apunta la cámara al código de barras del producto', barcodeSearching: 'Buscando producto...', barcodeNotFound: 'Producto no encontrado. Inténtalo con texto.',
     macroDetail: ['Proteína','Carbohidratos','Grasa'],
     macroInfo: [
       'Esencial para construir y reparar músculo. Tu objetivo es {goal}g al día (2.2g por kg de peso corporal).',
@@ -100,7 +109,7 @@ const TR = {
     remaining: 'kcal remaining', over: 'kcal over ⚠️',
     meals: 'meals', goal: 'goal', left: 'remaining',
     logTitle: "Today's log", history: '📋 History', closeDay: '✓ Close day', clear: '🗑 Clear',
-    addMeal: 'Add meal', photo: '📷 Photo', describe: '✏️ Describe',
+    addMeal: 'Add meal', photo: 'Photo', describe: 'Describe',
     analyzing: 'Analyzing...', processing: 'Processing', estimating: 'Estimating calories & macros...',
     identified: 'Identified!', reviewNutri: 'Review and confirm the nutritional analysis.',
     addToLog: '✓ Add to log', analyzeOther: 'Analyze another',
@@ -130,6 +139,7 @@ const TR = {
     currentFood: 'Current food:', correction: 'Correction:', recalculate: 'Recalculate with AI →',
     emptyToday: "Nothing logged today yet.\nAdd your first meal.",
     protein: 'Protein', carbs: 'Carbs', fat: 'Fat', kcal: 'kcal', prot: 'prot',
+    barcode: 'Barcode', barcodeHint: 'Point the camera at the product barcode', barcodeSearching: 'Searching product...', barcodeNotFound: 'Product not found. Try with text instead.',
     macroDetail: ['Protein','Carbohydrates','Fat'],
     macroInfo: [
       'Essential for building and repairing muscle. Your daily goal is {goal}g (2.2g per kg of body weight).',
@@ -227,6 +237,7 @@ export default function App(){
   const [showHistory,setShowHistory]=useState(false);
   const [history,setHistory]=useState([]);
   const [editingEntryIdx,setEditingEntryIdx]=useState(null);
+  const timerRef=useRef(null);
   const slideAnim=useRef(new Animated.Value(800)).current;
 
   function openHistory(){
@@ -250,12 +261,14 @@ export default function App(){
   const [expandedEntry,setExpandedEntry]=useState(null);// expanded history entry idx
   const [selectedMeal,setSelectedMeal]=useState(null); // meal detail popup
   const [lang,setLang]=useState('es');
+  const [darkMode,setDarkMode]=useState(true);
+  const C=darkMode?DARK:LIGHT;
   const [isSubscribed,setIsSubscribed]=useState(false);
   const [showPaywall,setShowPaywall]=useState(false);
   const [showMacroModal,setShowMacroModal]=useState(null); // 'protein'|'carbs'|'fat'
   const [dailyAnalyses,setDailyAnalyses]=useState(0);
   const DAILY_LIMIT=10;
-  const isDev=devCode==='Jcg12345';
+  const isDev=devCode.length>0; // verified by backend
   function isUnlimited(){ return isDev; }
   const t=TR[lang]||TR.es;
   const MODES=getMODES(t);
@@ -263,6 +276,15 @@ export default function App(){
   const MEAL_TYPES=getMEAL_TYPES(t);
   const [showSettings,setShowSettings]=useState(false);
   const [addTab,setAddTab]=useState('photo');
+  const [scanning,setScanning]=useState(false);
+  const [barcodeScanned,setBarcodeScanned]=useState(false);
+  const [barcodeProduct,setBarcodeProduct]=useState(null);
+  const [barcodeGrams,setBarcodeGrams]=useState('100');
+  const [editingResult,setEditingResult]=useState(false);
+  const [quantityMode,setQuantityMode]=useState('portions'); // 'portions'|'grams'
+  const [portions,setPortions]=useState(1);
+  const [customGrams,setCustomGrams]=useState('');
+  const [expandedDescs,setExpandedDescs]=useState({});
   const [addPrevStep,setAddPrevStep]=useState('photo'); // 'photo'|'text'
   const [addStep,setAddStep]=useState('upload'); // upload | analyzing | result | error
   const [pendingMeal,setPendingMeal]=useState(null);
@@ -279,6 +301,7 @@ export default function App(){
   const [fActivity,setFActivity]=useState(1.55);
   const [fMode,setFMode]=useState('maint');
   const [fDevCode,setFDevCode]=useState('');
+  const [devCodeError,setDevCodeError]=useState(false);
 
   // Load data
   useEffect(()=>{
@@ -315,6 +338,21 @@ export default function App(){
   },[]);
 
   const saveMeals=(m)=>{ AsyncStorage.setItem('cmeals_today',JSON.stringify({date:todayKey(),meals:m})).catch(()=>{}); };
+
+  // Auto-reset at midnight if app stays open
+  useEffect(()=>{
+    const checkMidnight=()=>{
+      const now=new Date();
+      const msUntilMidnight=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1,0,0,5).getTime()-now.getTime();
+      return setTimeout(()=>{
+        setDailyAnalyses(0);
+        AsyncStorage.setItem('cdaily_analyses',JSON.stringify({date:todayKey(),count:0})).catch(()=>{});
+        timerRef.current=checkMidnight(); // schedule next day
+      }, msUntilMidnight);
+    };
+    timerRef.current=checkMidnight();
+    return ()=>{ if(timerRef.current) clearTimeout(timerRef.current); };
+  },[]);
   const saveProfile=(p)=>{ AsyncStorage.setItem('cprofile',JSON.stringify(p)).catch(()=>{}); };
   const saveHistory=(h)=>{ AsyncStorage.setItem('chistory',JSON.stringify(h)).catch(()=>{}); };
 
@@ -382,7 +420,7 @@ export default function App(){
   function openEditMeal(idx){
     const m=meals[idx];
     setEditMealIdx(idx);
-    setEditMealData({name:m.name,desc:m.desc||'',emoji:m.emoji||'🍽️',correction:'',analyzing:false,mealType:m.mealType||'breakfast'});
+    setEditMealData({name:m.name,desc:m.desc||'',emoji:m.emoji||'🍽️',correction:'',analyzing:false,mealType:m.mealType||'breakfast',portion:m.portion||'',isBarcode:m.isBarcode||false,kcal100:m.kcal100||0,protein100:m.protein100||0,carbs100:m.carbs100||0,fat100:m.fat100||0});
     setShowEditMeal(true);
   }
 
@@ -396,15 +434,23 @@ export default function App(){
       const raw=await callAnthropic({model:'claude-sonnet-4-20250514',max_tokens:400,messages:[{role:'user',content:prompt}]});
       const data=JSON.parse(raw);
       const meal=JSON.parse(data.content.map(b=>b.text||'').join('').replace(/```json|```/gi,'').trim());
-      const updated=[...meals];
       const mt=MEAL_TYPES.find(t=>t.id===editMealData.mealType)||MEAL_TYPES[0];
-      updated[editMealIdx]={
-        ...updated[editMealIdx],
-        name:meal.name, desc:meal.desc, emoji:meal.emoji,
-        kcal:meal.kcal, protein:meal.protein, carbs:meal.carbs, fat:meal.fat, portion:meal.portion,
-        mealType:editMealData.mealType, mealTypeLabel:mt.label, mealTypeIcon:mt.icon,
-      };
-      setMeals(updated); saveMeals(updated);
+      if(editMealData.fromHistory){
+        const hIdx=editMealData.historyIdx;
+        const updatedH=[...history];
+        const updatedMeals=[...updatedH[hIdx].meals];
+        updatedMeals[editMealIdx]={...updatedMeals[editMealIdx],name:meal.name,desc:meal.desc,emoji:meal.emoji,kcal:meal.kcal,protein:meal.protein,carbs:meal.carbs,fat:meal.fat,portion:meal.portion,mealType:editMealData.mealType,mealTypeLabel:mt.label,mealTypeIcon:mt.icon};
+        const newTotalKcal=updatedMeals.reduce((s,m)=>s+m.kcal,0);
+        const newTotalP=updatedMeals.reduce((s,m)=>s+(m.protein||0),0);
+        const newTotalC=updatedMeals.reduce((s,m)=>s+(m.carbs||0),0);
+        const newTotalG=updatedMeals.reduce((s,m)=>s+(m.fat||0),0);
+        updatedH[hIdx]={...updatedH[hIdx],meals:updatedMeals,totalKcal:newTotalKcal,totalP:newTotalP,totalC:newTotalC,totalG:newTotalG};
+        setHistory(updatedH); AsyncStorage.setItem('chistory',JSON.stringify(updatedH)).catch(()=>{});
+      } else {
+        const updated=[...meals];
+        updated[editMealIdx]={...updated[editMealIdx],name:meal.name,desc:meal.desc,emoji:meal.emoji,kcal:meal.kcal,protein:meal.protein,carbs:meal.carbs,fat:meal.fat,portion:meal.portion,mealType:editMealData.mealType,mealTypeLabel:mt.label,mealTypeIcon:mt.icon};
+        setMeals(updated); saveMeals(updated);
+      }
       setShowEditMeal(false); setEditMealIdx(null);
       setEditMealData({});
     }catch(err){
@@ -455,11 +501,20 @@ export default function App(){
     setShowSettings(true);
   }
 
-  function saveSettings(){
-    const p={sex:fSex,age:parseInt(fAge)||0,weight:parseFloat(fWeight)||0,targetWeight:parseFloat(fTargetWeight)||0,height:parseFloat(fHeight)||0,activity:fActivity,mode:fMode};
-    if(fDevCode) { setDevCode(fDevCode); }
+  async function saveSettings(){
+    // Validate dev code via backend (never in client)
+    setDevCodeError(false);
+    const p={sex:fSex,age:parseInt(fAge)||0,weight:parseFloat((fWeight||'0').replace(',','.'))||0,targetWeight:parseFloat((fTargetWeight||'0').replace(',','.'))||0,height:parseFloat((fHeight||'0').replace(',','.'))||0,activity:fActivity,mode:fMode};
+    if(fDevCode && fDevCode.length>0){
+      try{
+        const res=await fetch(BACKEND_URL+'/verify-dev',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:fDevCode})});
+        const json=await res.json();
+        if(json.valid){ setDevCode(fDevCode); }
+        else { setDevCodeError(true); return; }
+      }catch(e){ setDevCodeError(true); return; }
+    } else { setDevCode(''); }
+    AsyncStorage.setItem('cdarkmode',String(darkMode)).catch(()=>{});
     setProfile(p); saveProfile(p);
-
     setShowSettings(false);
   }
 
@@ -520,6 +575,69 @@ export default function App(){
     AsyncStorage.setItem('cdaily_analyses',JSON.stringify({date:todayKey(),count:newCount})).catch(()=>{});
   }
 
+  async function scanBarcode({data}){
+    if(barcodeScanned) return;
+    if(!isUnlimited() && dailyAnalyses>=DAILY_LIMIT){
+      setScanning(false);
+      setBarcodeScanned(true);
+      setAddStep('error');
+      setErrorMsg(lang==='en'?`Daily limit reached (${DAILY_LIMIT} analyses). Come back tomorrow! 🌅`:`Límite diario alcanzado (${DAILY_LIMIT} análisis). ¡Vuelve mañana! 🌅`);
+      return;
+    }
+    setBarcodeScanned(true);
+    setScanning(false);
+    setAddStep('analyzing');
+    try{
+      const res=await fetch(`https://world.openfoodfacts.org/api/v0/product/${data}.json`);
+      const json=await res.json();
+      if(!json.product){ throw new Error(t.barcodeNotFound); }
+      if(json.product.product_name===undefined && Object.keys(json.product.nutriments||{}).length===0){
+        throw new Error(lang==='en'?'Product found but no nutritional data available':'Producto encontrado pero sin datos nutricionales');
+      }
+      const p=json.product;
+      const n=p.nutriments||{};
+      const name=(p.product_name||p.product_name_es||p.product_name_en||'Producto').slice(0,40);
+      // energy can be in kJ - convert: 1 kcal = 4.184 kJ
+      const kcal100=n['energy-kcal_100g']||n['energy-kcal']||
+        (n['energy-kj_100g']||n['energy-kj']||n['energy_100g']||n.energy||0)/4.184;
+      const protein100=n.proteins_100g||n['proteins-dry-matter_100g']||n.proteins||0;
+      const carbs100=n.carbohydrates_100g||n['carbohydrates-dry-matter_100g']||n.carbohydrates||0;
+      const fat100=n.fat_100g||n['saturated-fat_100g']!==undefined?n.fat_100g||0:n.fat||0;
+      setPendingMeal({
+        name, emoji:'📊',
+        desc:p.ingredients_text_es||p.ingredients_text||'',
+        kcal:Math.round(kcal100), protein:Math.round(protein100),
+        carbs:Math.round(carbs100), fat:Math.round(fat100),
+        portion:'100g', isBarcode:true,
+        kcal100, protein100, carbs100, fat100,
+      });
+      setAddStep('result');
+      incrementAnalyses();
+    }catch(err){
+      setErrorMsg(err.message||t.barcodeNotFound);
+      setAddStep('error');
+    }
+  }
+
+  function confirmBarcodeGrams(){
+    const g=parseFloat(barcodeGrams)||100;
+    const ratio=g/100;
+    const p=barcodeProduct;
+    setPendingMeal({
+      name:p.name, emoji:p.emoji, desc:p.desc,
+      kcal:Math.round(p.kcal100*ratio),
+      protein:Math.round(p.protein100*ratio),
+      carbs:Math.round(p.carbs100*ratio),
+      fat:Math.round(p.fat100*ratio),
+      portion:g+'g',
+      isBarcode:true,
+      kcal100:p.kcal100, protein100:p.protein100, carbs100:p.carbs100, fat100:p.fat100,
+    });
+    setBarcodeProduct(null);
+    setAddStep('result');
+    incrementAnalyses();
+  }
+
   async function analyzeImage(asset){
     if(!isSubscribed && !isDev){ setShowAdd(false); setShowPaywall(true); return; }
     if(!isUnlimited() && dailyAnalyses>=DAILY_LIMIT){
@@ -562,14 +680,31 @@ export default function App(){
       const data=JSON.parse(raw);
       const txt=data.content.map(b=>b.text||'').join('').replace(/```json|```/gi,'').trim();
       const meal=JSON.parse(txt);
-      setPendingMeal(meal); setAddStep('result'); incrementAnalyses();
+      setPendingMeal({...meal,fromText:true}); setAddStep('result'); incrementAnalyses();
     }catch(err){ setAddStep('error'); setErrorMsg(err.message||'Error desconocido'); }
   }
 
   function confirmMeal(){
     if(!pendingMeal) return;
+    let meal={...pendingMeal};
+    // Apply quantity multiplier
+    if(!meal.fromText){
+      if(quantityMode==='portions' && portions>1){
+        const p=portions;
+        meal={...meal,kcal:Math.round(meal.kcal*p),protein:Math.round((meal.protein||0)*p),carbs:Math.round((meal.carbs||0)*p),fat:Math.round((meal.fat||0)*p),portion:`${p}x ${meal.portion||''}`};
+      } else if((quantityMode==='grams'||quantityMode==='ml') && parseFloat(customGrams)>0){
+        const g=parseFloat(customGrams);
+        const ratio=g/100;
+        if(meal.isBarcode){
+          meal={...meal,kcal:Math.round((meal.kcal100||meal.kcal)*ratio),protein:Math.round((meal.protein100||meal.protein||0)*ratio),carbs:Math.round((meal.carbs100||meal.carbs||0)*ratio),fat:Math.round((meal.fat100||meal.fat||0)*ratio),portion:`${g}${quantityMode==='ml'?'ml':'g'}`};
+        } else {
+          const baseG=parseFloat(meal.portion)||100;
+          meal={...meal,kcal:Math.round(meal.kcal*(g/baseG)),protein:Math.round((meal.protein||0)*(g/baseG)),carbs:Math.round((meal.carbs||0)*(g/baseG)),fat:Math.round((meal.fat||0)*(g/baseG)),portion:`${g}${quantityMode==='ml'?'ml':'g'}`};
+        }
+      }
+    }
     const mt=MEAL_TYPES.find(t=>t.id===mealType)||MEAL_TYPES[0];
-    const newItem={...pendingMeal,imgSrc:pendingImg,time:timeNow(),mealType:mealType||'breakfast',mealTypeLabel:mt.label,mealTypeIcon:mt.icon};
+    const newItem={...meal,imgSrc:pendingImg,time:timeNow(),mealType:mealType||'breakfast',mealTypeLabel:mt.label,mealTypeIcon:mt.icon};
     if(editingEntryIdx!==null){
       const updated=[...history];
       const entry={...updated[editingEntryIdx]};
@@ -590,18 +725,29 @@ export default function App(){
     }
   }
 
-  function resetAdd(){ setAddStep('upload'); setPendingMeal(null); setPendingImg(null); setErrorMsg(''); setRecipeText(''); setMealType(null); }
+  function resetAdd(){
+    setEditingResult(false);
+    setPortions(1);
+    setCustomGrams('');
+    setQuantityMode('portions');
+    setAddStep('upload');
+    setPendingMeal(null);
+    setPendingImg(null);
+    setErrorMsg('');
+    setRecipeText('');
+    setMealType(null);
+  }
 
   function openAdd(){ resetAdd(); setShowAdd(true); }
 
-  const formProfile={sex:fSex,age:parseInt(fAge)||0,weight:parseFloat(fWeight)||0,activity:fActivity,mode:fMode,height:parseFloat(fHeight)||0};
+  const formProfile={sex:fSex,age:parseInt(fAge)||0,weight:parseFloat(fWeight.replace(',','.'))||0,activity:fActivity,mode:fMode,height:parseFloat(fHeight.replace(',','.'))||0};
   const formTDEE=calcTDEE(formProfile);
   const formGoal=calcGoal(formProfile);
 
   return (
     <View style={{flex:1}}>
     <SafeAreaView style={s.safe}>
-      <StatusBar barStyle="light-content" backgroundColor={C.bg}/>
+      <StatusBar barStyle={darkMode?"light-content":"dark-content"} backgroundColor={C.bg}/>
       <ScrollView style={s.scroll} contentContainerStyle={s.scrollContent} showsVerticalScrollIndicator={false}>
 
         {/* HEADER */}
@@ -659,7 +805,7 @@ export default function App(){
                 <View style={{alignItems:'center'}}>
                   <Text style={{fontSize:28,marginBottom:6}}>🎉</Text>
                   <Text style={{fontSize:20,fontWeight:'800',color:C.lime,letterSpacing:-0.5}}>{t.goalReached}</Text>
-                  <Text style={{fontSize:13,color:C.muted,marginTop:4}}>{profile.weight} kg · meta {profile.targetWeight} kg</Text>
+                  <Text style={{fontSize:13,color:C.muted,marginTop:4}}>{Number.isInteger(profile.weight)?profile.weight:profile.weight.toFixed(1)} kg · meta {Number.isInteger(profile.targetWeight)?profile.targetWeight:profile.targetWeight.toFixed(1)} kg</Text>
                 </View>
               ):(
                 <>
@@ -677,7 +823,7 @@ export default function App(){
                       <View style={{flexDirection:'row',gap:16}}>
                         <View style={{alignItems:'center'}}>
                           <Text style={{fontSize:11,color:C.muted,marginBottom:2}}>{t.weightActual}</Text>
-                          <Text style={{fontSize:18,fontWeight:'700',color:C.text}}>{profile.weight}<Text style={{fontSize:11,color:C.muted}}> kg</Text></Text>
+                          <Text style={{fontSize:18,fontWeight:'700',color:C.text}}>{Number.isInteger(profile.weight)?profile.weight:profile.weight.toFixed(1)}<Text style={{fontSize:11,color:C.muted}}> kg</Text></Text>
                         </View>
                         <View style={{alignItems:'center'}}>
                           <Text style={{fontSize:11,color:C.muted,marginBottom:2}}>{t.weightGoal}</Text>
@@ -725,10 +871,20 @@ export default function App(){
               const i=meals.length-1-ri;
               return (
                 <TouchableOpacity key={i} style={s.mealCard} onPress={()=>setSelectedMeal(m)} activeOpacity={0.8}>
-                  {m.imgSrc
-                    ? <Image source={{uri:m.imgSrc}} style={s.mealImg}/>
-                    : <View style={s.mealImgPh}><Text style={{fontSize:28}}>{m.emoji||'🍽️'}</Text></View>
-                  }
+                  <View style={{width:90,alignItems:'center',justifyContent:'center',backgroundColor:C.card}}>
+                    {m.imgSrc
+                      ? <Image source={{uri:m.imgSrc}} style={{width:90,height:90,resizeMode:'cover'}}/>
+                      : m.emoji==='📊'
+                        ? <View style={{width:90,alignItems:'center',justifyContent:'center',shadowColor:C.lime,shadowOpacity:0.6,shadowRadius:8,elevation:6}}>
+                            <Svg width={40} height={30} viewBox="0 0 22 16">
+                              {[0,2,4,5,7,9,11,12,14,16,18,20].map((x,i)=>(
+                                <Line key={i} x1={x} y1={1} x2={x} y2={15} stroke={C.lime} strokeWidth={i%3===0?2.5:1.2}/>
+                              ))}
+                            </Svg>
+                          </View>
+                        : <Text style={{fontSize:32}}>{m.emoji||'🍽️'}</Text>
+                    }
+                  </View>
                   <View style={{flex:1,padding:14,justifyContent:'space-between'}}>
                     <View>
                       <View style={{flexDirection:'row',alignItems:'center',gap:6,marginBottom:3}}>
@@ -736,13 +892,26 @@ export default function App(){
                         {m.mealTypeLabel&&<Text style={{fontSize:10,color:C.muted}}>{m.mealTypeLabel}</Text>}
                       </View>
                       <Text style={{fontSize:14,fontWeight:'700',color:C.text,marginBottom:2}}>{m.name}</Text>
-                      <Text style={{fontSize:12,color:C.muted}}>{m.desc}</Text>
+                      {m.desc&&m.desc.length>60?(
+                        <TouchableOpacity onPress={(e)=>{e.stopPropagation();setExpandedDescs(p=>({...p,[i]:!p[i]}));}}>
+                          <Text style={{fontSize:12,color:C.muted}} numberOfLines={expandedDescs[i]?undefined:2}>{m.desc}</Text>
+                          <Text style={{fontSize:10,color:C.lime,marginTop:2}}>{expandedDescs[i]?(lang==='en'?'▲ Less':'▲ Menos'):(lang==='en'?'▼ More':'▼ Ver más')}</Text>
+                        </TouchableOpacity>
+                      ):(
+                        <Text style={{fontSize:12,color:C.muted}}>{m.desc}</Text>
+                      )}
                     </View>
                     <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'center',marginTop:8}}>
                       <Text style={{fontSize:20,fontWeight:'800',color:C.lime}}>{m.kcal}<Text style={{fontSize:11,color:C.muted,fontWeight:'400'}}> kcal</Text></Text>
                       <View style={{flexDirection:'row',alignItems:'center',gap:8}}>
                         <Text style={{fontSize:11,color:C.muted}}>{m.time}</Text>
-                        <TouchableOpacity onPress={(e)=>{e.stopPropagation();openEditMeal(i);}} style={{padding:6}}>
+                        <TouchableOpacity onPress={(e)=>{e.stopPropagation();
+                          showAlert(
+                            lang==='en'?'Edit meal':'Editar comida',
+                            lang==='en'?'Do you want to edit this meal?':'¿Quieres editar esta comida?',
+                            [{text:lang==='en'?'Cancel':'Cancelar'},{text:lang==='en'?'Edit':'Editar',style:'confirm',onPress:()=>openEditMeal(i)}]
+                          );
+                        }} style={{padding:6}}>
                           <Text style={{color:C.blue,fontSize:13}}>✏️</Text>
                         </TouchableOpacity>
                         <TouchableOpacity onPress={(e)=>{e.stopPropagation();deleteMeal(i);}} style={{padding:6}}>
@@ -762,14 +931,14 @@ export default function App(){
       {/* FAB */}
       <TouchableOpacity style={s.fab} onPress={openAdd} activeOpacity={0.85}>
         <Text style={{fontSize:18,marginRight:8}}>📷</Text>
-        <Text style={{fontSize:16,fontWeight:'700',color:'#0d0f14'}}>{t.addMeal}</Text>
+        <Text style={{fontSize:16,fontWeight:'700',color:'#060d1a'}}>{t.addMeal}</Text>
       </TouchableOpacity>
 
       {/* ── ADD MODAL ─────────────────────────────────────── */}
       <Modal visible={showAdd} animationType="slide" transparent={false} onRequestClose={()=>{setShowAdd(false);resetAdd();setEditingEntryIdx(null);}} hardwareAccelerated={true}>
         <KeyboardAvoidingView behavior={Platform.OS==='ios'?'padding':'height'} style={{flex:1,backgroundColor:C.surface}}>
           <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-            <View style={{flex:1,padding:24,paddingTop:Platform.OS==='ios'?60:40}} onStartShouldSetResponder={()=>true}>
+            <View style={{flex:1,padding:24,paddingTop:Platform.OS==='ios'?60:40}}>
               <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
                 <View style={{width:40,height:4,backgroundColor:C.border,borderRadius:99}}/>
                 <TouchableOpacity onPress={()=>{setShowAdd(false);resetAdd();setEditingEntryIdx(null);}}>
@@ -777,7 +946,7 @@ export default function App(){
                 </TouchableOpacity>
               </View>
 
-              <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+              <ScrollView keyboardShouldPersistTaps="always" showsVerticalScrollIndicator={false}>
               {addStep==='upload' && (
                 <>
                   {editingEntryIdx!==null && (
@@ -798,15 +967,53 @@ export default function App(){
                     ))}
                   </View>
                   <View style={s.tabRow}>
-                    <TouchableOpacity style={[s.tabBtn,addTab==='photo'&&s.tabOn]} onPress={()=>setAddTab('photo')}>
-                      <Text style={{color:addTab==='photo'?'#0d0f14':C.muted,fontWeight:'600',fontSize:14}}>{t.photo}</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={[s.tabBtn,addTab==='text'&&s.tabOn]} onPress={()=>setAddTab('text')}>
-                      <Text style={{color:addTab==='text'?'#0d0f14':C.muted,fontWeight:'600',fontSize:14}}>{t.describe}</Text>
-                    </TouchableOpacity>
+                    {[
+                      {id:'photo', icon:'📷', label:t.photo},
+                      {id:'text',  icon:'✏️', label:t.describe},
+                      {id:'barcode',icon:null, label:t.barcode},
+                    ].map(tab=>(
+                      <TouchableOpacity key={tab.id} style={[s.tabBtn,addTab===tab.id&&s.tabOn,{alignItems:'center',justifyContent:'center',paddingVertical:10}]}
+                        onPress={()=>{setAddTab(tab.id);if(tab.id==='barcode') setBarcodeScanned(false);}}>
+                        {tab.icon
+                          ? <Text style={{fontSize:16,marginBottom:2}}>{tab.icon}</Text>
+                          : <Svg width={22} height={16} viewBox="0 0 22 16" style={{marginBottom:2}}>
+                              {[0,2,4,5,7,9,11,12,14,16,18,20].map((x,i)=>( <Line key={i} x1={x} y1={0} x2={x} y2={16} stroke={addTab==='barcode'?'#ffffff':C.muted} strokeWidth={i%3===0?2:1}/> ))}
+                            </Svg>
+                        }
+                        <Text style={{color:addTab===tab.id?'#060d1a':C.muted,fontWeight:'600',fontSize:10,textAlign:'center'}}>{tab.label}</Text>
+                      </TouchableOpacity>
+                    ))}
                   </View>
 
-                  {addTab==='photo'?(
+                  {addTab==='barcode'?(
+                    <>
+                      <Text style={{fontSize:13,color:C.muted,marginBottom:16,lineHeight:20}}>{t.barcodeHint}</Text>
+                      {!scanning?(
+                        <TouchableOpacity style={[s.photoBtn,{height:160}]} onPress={async()=>{
+                          const {status}=await Camera.requestCameraPermissionsAsync();
+                          if(status==='granted'){ setScanning(true); setBarcodeScanned(false); }
+                        }}>
+                          <Text style={{fontSize:40,marginBottom:8}}>🔍</Text>
+                          <Text style={{fontSize:14,color:C.lime,fontWeight:'600'}}>{t.barcode}</Text>
+                        </TouchableOpacity>
+                      ):(
+                        <View style={{height:280,borderRadius:16,overflow:'hidden',borderWidth:2,borderColor:C.lime}}>
+                          <CameraView
+                            style={{flex:1}}
+                            facing="back"
+                            barcodeScannerSettings={{barcodeTypes:['ean13','ean8','upc_a','upc_e','code128','code39']}}
+                            onBarcodeScanned={barcodeScanned?undefined:scanBarcode}
+                          />
+                          <View style={{position:'absolute',top:0,left:0,right:0,bottom:0,justifyContent:'center',alignItems:'center'}}>
+                            <View style={{width:220,height:80,borderWidth:2,borderColor:C.lime,borderRadius:8,backgroundColor:'transparent'}}/>
+                          </View>
+                          <TouchableOpacity onPress={()=>setScanning(false)} style={{position:'absolute',top:12,right:12,backgroundColor:'rgba(3,10,25,0.7)',borderRadius:20,padding:8}}>
+                            <Text style={{color:'white',fontSize:12}}>✕</Text>
+                          </TouchableOpacity>
+                        </View>
+                      )}
+                    </>
+                  ):addTab==='photo'?(
                     <>
                       <Text style={{fontSize:13,color:C.muted,marginBottom:16,lineHeight:20}}>{t.photoHint}</Text>
                       <TouchableOpacity style={s.photoBtn} onPress={takePhoto}>
@@ -832,11 +1039,54 @@ export default function App(){
                         textAlignVertical="top"
                       />
                       <TouchableOpacity style={[s.confirmBtn,{marginTop:12}]} onPress={analyzeText}>
-                        <Text style={{fontSize:15,fontWeight:'700',color:'#0d0f14'}}>{t.calcCalories}</Text>
+                        <Text style={{fontSize:15,fontWeight:'700',color:'#060d1a'}}>{t.calcCalories}</Text>
                       </TouchableOpacity>
                     </>
                   )}
+
                   <TouchableOpacity style={s.cancelBtn} onPress={()=>{setShowAdd(false);resetAdd();setEditingEntryIdx(null);if(editingEntryIdx!==null)setTimeout(()=>setShowHistory(true),300);}}>
+                    <Text style={{fontSize:14,color:C.muted}}>{t.cancel}</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+
+              {addStep==='barcode_grams' && barcodeProduct && (
+                <>
+                  <Text style={s.sheetTitle}>{barcodeProduct.name}</Text>
+                  <View style={{backgroundColor:C.card,borderRadius:16,padding:16,marginBottom:20,flexDirection:'row',alignItems:'center',gap:12}}>
+                    <Text style={{fontSize:32}}>📊</Text>
+                    <View style={{flex:1}}>
+                      <Text style={{fontSize:13,color:C.text,fontWeight:'600'}}>{barcodeProduct.name}</Text>
+                      <Text style={{fontSize:11,color:C.muted,marginTop:2}}>{lang==='en'?'Per 100g:':'Por 100g:'} {Math.round(barcodeProduct.kcal100)} kcal · {Math.round(barcodeProduct.protein100)}g {t.protein} · {Math.round(barcodeProduct.carbs100)}g {t.carbs} · {Math.round(barcodeProduct.fat100)}g {t.fat}</Text>
+                    </View>
+                  </View>
+                  <Text style={{fontSize:14,color:C.muted,marginBottom:10}}>{lang==='en'?'How many grams did you eat?':'¿Cuántos gramos comiste?'}</Text>
+                  <View style={{flexDirection:'row',alignItems:'center',gap:10,marginBottom:20}}>
+                    <TextInput
+                      style={{flex:1,backgroundColor:C.card,borderWidth:1,borderColor:C.lime,borderRadius:14,color:C.text,fontSize:24,fontWeight:'700',padding:14,textAlign:'center'}}
+                      keyboardType="numeric"
+                      value={barcodeGrams}
+                      onChangeText={setBarcodeGrams}
+                      autoFocus
+                      selectTextOnFocus
+                    />
+                    <Text style={{fontSize:18,color:C.muted}}>g</Text>
+                  </View>
+
+                  {barcodeGrams&&parseFloat(barcodeGrams)>0&&(
+                    <View style={{backgroundColor:C.surface,borderRadius:12,padding:12,marginBottom:16,flexDirection:'row',justifyContent:'space-around'}}>
+                      {[{v:Math.round(barcodeProduct.kcal100*(parseFloat(barcodeGrams)/100)),l:'kcal',c:C.lime},{v:Math.round(barcodeProduct.protein100*(parseFloat(barcodeGrams)/100))+'g',l:t.protein,c:C.lime},{v:Math.round(barcodeProduct.carbs100*(parseFloat(barcodeGrams)/100))+'g',l:t.carbs,c:C.orange},{v:Math.round(barcodeProduct.fat100*(parseFloat(barcodeGrams)/100))+'g',l:t.fat,c:C.blue}].map((x,i)=>(
+                        <View key={i} style={{alignItems:'center'}}>
+                          <Text style={{fontSize:15,fontWeight:'800',color:x.c}}>{x.v}</Text>
+                          <Text style={{fontSize:9,color:C.muted,textTransform:'uppercase'}}>{x.l}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                  <TouchableOpacity style={s.confirmBtn} onPress={confirmBarcodeGrams}>
+                    <Text style={{fontSize:15,fontWeight:'700',color:'#060d1a'}}>{lang==='en'?'Add to log':'Añadir al registro'}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={s.cancelBtn} onPress={()=>{setBarcodeProduct(null);setAddStep('upload');setAddTab('barcode');setBarcodeScanned(false);}}>
                     <Text style={{fontSize:14,color:C.muted}}>{t.cancel}</Text>
                   </TouchableOpacity>
                 </>
@@ -872,20 +1122,76 @@ export default function App(){
                       </View>
                     </View>
                     <View style={{flexDirection:'row',gap:8}}>
-                      {[{v:Math.round(pendingMeal.kcal),l:'kcal',c:C.lime},{v:Math.round(pendingMeal.protein)+'g',l:'prot',c:C.lime},{v:Math.round(pendingMeal.carbs)+'g',l:'carbos',c:C.orange},{v:Math.round(pendingMeal.fat)+'g',l:'grasa',c:C.blue}].map((x,i)=>(
+                      {[{v:Math.round(pendingMeal.kcal),l:'kcal',c:C.lime},{v:Math.round(pendingMeal.protein)+'g',l:t.prot,c:C.lime},{v:Math.round(pendingMeal.carbs)+'g',l:t.carbs,c:C.orange},{v:Math.round(pendingMeal.fat)+'g',l:t.fat,c:C.blue}].map((x,i)=>(
                         <View key={i} style={{flex:1,backgroundColor:C.surface,borderRadius:12,padding:10,alignItems:'center'}}>
                           <Text style={{fontSize:15,fontWeight:'700',color:x.c,marginBottom:2}}>{x.v}</Text>
-                          <Text style={{fontSize:9,color:C.muted,textTransform:'uppercase'}}>{x.l}</Text>
+                          <Text style={{fontSize:9,color:C.muted,textTransform:'uppercase'}} numberOfLines={1}>{x.l}</Text>
                         </View>
                       ))}
                     </View>
                   </View>
-                  <TouchableOpacity style={s.confirmBtn} onPress={confirmMeal}>
-                    <Text style={{fontSize:15,fontWeight:'700',color:'#0d0f14'}}>{t.addToLog}</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={s.cancelBtn} onPress={resetAdd}>
-                    <Text style={{fontSize:14,color:C.muted}}>{t.analyzeOther}</Text>
-                  </TouchableOpacity>
+                  {/* QUANTITY SELECTOR - not for text */}
+                  {!pendingMeal?.fromText&&<View style={{backgroundColor:C.card,borderRadius:16,padding:14,marginBottom:14}}>
+                    <Text style={{fontSize:12,color:C.muted,marginBottom:10}}>{lang==='en'?'Adjust quantity:':'Ajustar cantidad:'}</Text>
+                    <View style={{flexDirection:'row',gap:6,marginBottom:12}}>
+                      {[{id:'portions',icon:'🔢',label:lang==='en'?'Portions':'Porciones'},{id:'grams',icon:'⚖️',label:lang==='en'?'Grams':'Gramos'},{id:'ml',icon:'💧',label:'ml'}].map(q=>(
+                        <TouchableOpacity key={q.id} onPress={()=>setQuantityMode(q.id)} style={{flex:1,backgroundColor:quantityMode===q.id?'rgba(198,241,53,0.15)':C.surface,borderRadius:10,padding:8,alignItems:'center',borderWidth:1.5,borderColor:quantityMode===q.id?C.lime:C.border}}>
+                          <Text style={{fontSize:15,marginBottom:2}}>{q.icon}</Text>
+                          <Text style={{fontSize:10,color:quantityMode===q.id?C.lime:C.muted,fontWeight:'600'}}>{q.label}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    {quantityMode==='portions'?(
+                      <View style={{flexDirection:'row',gap:8,alignItems:'center',justifyContent:'center'}}>
+                        <TouchableOpacity onPress={()=>setPortions(p=>Math.max(1,p-1))} style={{width:40,height:40,borderRadius:20,backgroundColor:C.surface,alignItems:'center',justifyContent:'center',borderWidth:1,borderColor:C.border}}>
+                          <Text style={{fontSize:20,color:C.text}}>−</Text>
+                        </TouchableOpacity>
+                        <Text style={{fontSize:28,fontWeight:'800',color:C.lime,width:50,textAlign:'center'}}>{portions}</Text>
+                        <TouchableOpacity onPress={()=>setPortions(p=>p+1)} style={{width:40,height:40,borderRadius:20,backgroundColor:C.surface,alignItems:'center',justifyContent:'center',borderWidth:1,borderColor:C.border}}>
+                          <Text style={{fontSize:20,color:C.text}}>+</Text>
+                        </TouchableOpacity>
+                      </View>
+                    ):(
+                      <View style={{flexDirection:'row',alignItems:'center',gap:8}}>
+                        <TextInput style={{flex:1,backgroundColor:C.surface,borderWidth:1,borderColor:C.lime,borderRadius:12,color:C.text,fontSize:20,fontWeight:'700',padding:10,textAlign:'center'}}
+                          keyboardType="numeric" placeholder={quantityMode==='ml'?'200':'100'} placeholderTextColor={C.muted}
+                          value={customGrams} onChangeText={setCustomGrams}/>
+                        <Text style={{fontSize:16,color:C.muted}}>{quantityMode==='ml'?'ml':'g'}</Text>
+                      </View>
+                    )}
+                  </View>}
+
+                  {editingResult?(
+                    <View style={{marginBottom:12}}>
+                      <Text style={{fontSize:12,color:C.muted,marginBottom:8}}>{lang==='en'?'Correct the description and AI will recalculate:':'Corrige la descripción y la IA recalculará:'}</Text>
+                      <TextInput
+                        style={{backgroundColor:C.card,borderWidth:1,borderColor:C.lime,borderRadius:14,color:C.text,fontSize:14,padding:14,minHeight:80,textAlignVertical:'top'}}
+                        multiline autoFocus
+                        placeholder={lang==='en'?'E.g.: 1 banana, 2 boiled eggs...':'Ej: 1 plátano, 2 huevos cocidos...'}
+                        placeholderTextColor={C.muted}
+                        value={recipeText}
+                        onChangeText={setRecipeText}
+                      />
+                      <TouchableOpacity style={[s.confirmBtn,{marginTop:10}]} onPress={()=>{setEditingResult(false); analyzeText();}}>
+                        <Text style={{fontSize:14,fontWeight:'700',color:'#060d1a'}}>{lang==='en'?'Recalculate with AI →':'Recalcular con IA →'}</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={s.cancelBtn} onPress={()=>{setEditingResult(false);setRecipeText('');}}>
+                        <Text style={{fontSize:13,color:C.muted}}>{t.cancel}</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ):(
+                    <>
+                      <TouchableOpacity style={s.confirmBtn} onPress={confirmMeal}>
+                        <Text style={{fontSize:15,fontWeight:'700',color:'#060d1a'}}>{t.addToLog}</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={[s.cancelBtn,{marginBottom:6}]} onPress={()=>{setEditingResult(true);setRecipeText('');}}>
+                        <Text style={{fontSize:13,color:C.lime}}>{'✏️ '+(lang==='en'?'Correct this result':'Corregir este resultado')}</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={s.cancelBtn} onPress={resetAdd}>
+                        <Text style={{fontSize:14,color:C.muted}}>{t.analyzeOther}</Text>
+                      </TouchableOpacity>
+                    </>
+                  )}
                 </>
               )}
 
@@ -901,7 +1207,7 @@ export default function App(){
                     setErrorMsg('');
                     setAddTab(addPrevStep);
                   }}>
-                    <Text style={{fontSize:15,fontWeight:'700',color:'#0d0f14'}}>{t.retry}</Text>
+                    <Text style={{fontSize:15,fontWeight:'700',color:'#060d1a'}}>{t.retry}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={s.cancelBtn} onPress={resetAdd}>
                     <Text style={{fontSize:14,color:C.muted}}>{t.cancel}</Text>
@@ -918,7 +1224,7 @@ export default function App(){
       {showHistory && (
         <View style={{position:'absolute',top:0,left:0,right:0,bottom:0,zIndex:50}}>
           <TouchableWithoutFeedback onPress={closeHistory}>
-            <View style={{flex:1,backgroundColor:'rgba(0,0,0,0.6)'}}/>
+            <View style={{flex:1,backgroundColor:'rgba(3,10,25,0.7)'}}/>
           </TouchableWithoutFeedback>
           <Animated.View style={[s.sheet,{position:'absolute',bottom:0,left:0,right:0,height:'92%',transform:[{translateY:slideAnim}]}]}>
             <TouchableOpacity activeOpacity={1} onPress={closeHistory} style={{alignItems:'center',paddingBottom:4}}>
@@ -987,7 +1293,15 @@ export default function App(){
                               <View style={{flexDirection:'row',alignItems:'center',gap:10}}>
                                 {m.imgSrc
                                   ? <Image source={{uri:m.imgSrc}} style={{width:38,height:38,borderRadius:10,flexShrink:0}}/>
-                                  : <View style={{width:38,height:38,borderRadius:10,backgroundColor:C.surface,alignItems:'center',justifyContent:'center',flexShrink:0}}><Text style={{fontSize:22}}>{m.emoji||'🍽️'}</Text></View>
+                                  : m.emoji==='📊'
+                                    ? <View style={{width:38,height:38,borderRadius:10,backgroundColor:C.card,alignItems:'center',justifyContent:'center',flexShrink:0,shadowColor:C.lime,shadowOpacity:0.5,shadowRadius:6,elevation:4}}>
+                                        <Svg width={26} height={20} viewBox="0 0 22 16">
+                                          {[0,2,4,5,7,9,11,12,14,16,18,20].map((x,i)=>(
+                                            <Line key={i} x1={x} y1={1} x2={x} y2={15} stroke={C.lime} strokeWidth={i%3===0?2.5:1.2}/>
+                                          ))}
+                                        </Svg>
+                                      </View>
+                                    : <View style={{width:38,height:38,borderRadius:10,backgroundColor:C.surface,alignItems:'center',justifyContent:'center',flexShrink:0}}><Text style={{fontSize:22}}>{m.emoji||'🍽️'}</Text></View>
                                 }
                                 <View style={{flex:1}}>
                                   <View style={{flexDirection:'row',alignItems:'center',gap:4}}>
@@ -999,6 +1313,21 @@ export default function App(){
                                     <Text style={{fontSize:13,fontWeight:'700',color:mode.color,marginLeft:8}}>{'  '}{m.kcal} kcal ›</Text>
                                   </View>
                                 </View>
+                                {isEditable(entry)&&(
+                                  <TouchableOpacity onPress={(e)=>{e.stopPropagation();
+                                    showAlert(
+                                      lang==='en'?'Edit meal':'Editar comida',
+                                      lang==='en'?'Do you want to edit this meal?':'¿Quieres editar esta comida?',
+                                      [{text:lang==='en'?'Cancel':'Cancelar'},{text:lang==='en'?'Edit':'Editar',style:'confirm',onPress:()=>{
+                                        setEditMealIdx(mi);
+                                        setEditMealData({name:m.name,desc:m.desc||'',emoji:m.emoji||'🍽️',correction:'',analyzing:false,mealType:m.mealType||'breakfast',fromHistory:true,historyIdx:i,portion:m.portion||'',isBarcode:m.isBarcode||false,kcal100:m.kcal100||0,protein100:m.protein100||0,carbs100:m.carbs100||0,fat100:m.fat100||0});
+                                        setShowEditMeal(true);
+                                      }}]
+                                    );
+                                  }} style={{padding:6}}>
+                                    <Text style={{color:C.blue,fontSize:13}}>✏️</Text>
+                                  </TouchableOpacity>
+                                )}
                               </View>
                             </TouchableOpacity>
                           ))}
@@ -1032,7 +1361,7 @@ export default function App(){
             <TouchableOpacity activeOpacity={1} onPress={()=>setShowSettings(false)} style={{alignItems:'center',paddingBottom:4}}>
               <View style={s.handle}/>
             </TouchableOpacity>
-            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" onScrollBeginDrag={Keyboard.dismiss}>
               <Text style={s.sheetTitle}>{t.profileTitle}</Text>
               <Text style={{fontSize:13,color:C.muted,marginBottom:20,lineHeight:20}}>{t.profileSub}</Text>
 
@@ -1045,7 +1374,7 @@ export default function App(){
                 <View style={{flexDirection:'row',gap:8}}>
                   {['m','f'].map(v=>(
                     <TouchableOpacity key={v} style={[s.pill,fSex===v&&{backgroundColor:C.lime}]} onPress={()=>setFSex(v)}>
-                      <Text style={{fontSize:13,fontWeight:'600',color:fSex===v?'#0d0f14':C.muted}}>{v==='m'?t.male:t.female}</Text>
+                      <Text style={{fontSize:13,fontWeight:'600',color:fSex===v?'#060d1a':C.muted}}>{v==='m'?t.male:t.female}</Text>
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -1053,7 +1382,7 @@ export default function App(){
               {[{l:t.age,v:fAge,s:setFAge,p:'25'},{l:t.currentWeight,v:fWeight,s:setFWeight,p:'70'},{l:t.targetWeight,v:fTargetWeight,s:setFTargetWeight,p:'65'},{l:t.height,v:fHeight,s:setFHeight,p:'175'}].map((f,i)=>(
                 <View key={i} style={s.fieldRow}>
                   <Text style={s.fieldLabel}>{f.l}</Text>
-                  <TextInput style={[s.input,{width:90,textAlign:'right'}]} keyboardType="numeric" placeholder={f.p} placeholderTextColor={C.muted} value={f.v} onChangeText={f.s}/>
+                  <TextInput style={[s.input,{width:90,textAlign:'right'}]} keyboardType="decimal-pad" placeholder={f.p} placeholderTextColor={C.muted} value={f.v} onChangeText={v=>f.s(v.replace(',','.'))}/>
                 </View>
               ))}
 
@@ -1116,6 +1445,21 @@ export default function App(){
 
               {/* LANGUAGE */}
               <View style={{marginBottom:20}}>
+                {/* APPEARANCE */}
+                <Text style={s.secTitle}>{lang==='en'?'Appearance':'Apariencia'}</Text>
+                <View style={[s.fieldRow,{marginBottom:20,alignItems:'center'}]}>
+                  <Text style={s.fieldLabel}>{lang==='en'?'Dark mode':'Modo oscuro'}</Text>
+                  <TouchableOpacity
+                    onPress={()=>{
+                      const newVal=!darkMode;
+                      setDarkMode(newVal);
+                      AsyncStorage.setItem('cdarkmode',String(newVal)).catch(()=>{});
+                    }}
+                    style={{width:52,height:28,borderRadius:14,backgroundColor:darkMode?C.lime:C.border,justifyContent:'center',paddingHorizontal:3}}>
+                    <View style={{width:22,height:22,borderRadius:11,backgroundColor:'#ffffff',transform:[{translateX:darkMode?24:0}]}}/>
+                  </TouchableOpacity>
+                </View>
+
                 <Text style={s.secTitle}>{t.language}</Text>
                 <View style={{flexDirection:'row',gap:8}}>
                   {['es','en'].map(l=>(
@@ -1135,17 +1479,18 @@ export default function App(){
                 <TextInput
                   style={s.input}
                   value={fDevCode}
-                  onChangeText={setFDevCode}
+                  onChangeText={v=>{setFDevCode(v);setDevCodeError(false);}}
                   placeholder={lang==='en'?'Enter dev code':'Introduce el código'}
                   placeholderTextColor={C.muted}
                   secureTextEntry
                   autoCapitalize="none"
                 />
                 {isDev&&<Text style={{fontSize:11,color:C.lime,marginTop:8}}>✓ {lang==='en'?'Developer mode active — unlimited':'Modo desarrollador activo — sin límites'}</Text>}
+                {devCodeError&&<Text style={{fontSize:12,color:C.danger,marginTop:8}}>⚠️ {lang==='en'?'Incorrect code':'Código incorrecto'}</Text>}
               </View>
 
               <TouchableOpacity style={s.confirmBtn} onPress={saveSettings}>
-                <Text style={{fontSize:15,fontWeight:'700',color:'#0d0f14'}}>{t.save}</Text>
+                <Text style={{fontSize:15,fontWeight:'700',color:'#060d1a'}}>{t.save}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.cancelBtn} onPress={()=>setShowSettings(false)}>
                 <Text style={{fontSize:14,color:C.muted}}>{t.cancel}</Text>
@@ -1159,7 +1504,7 @@ export default function App(){
       {/* ── MEAL DETAIL MODAL ─────────────────────────────── */}
       {selectedMeal && (
         <Modal visible={true} animationType="fade" transparent onRequestClose={()=>setSelectedMeal(null)}>
-          <TouchableOpacity style={{flex:1,backgroundColor:'rgba(0,0,0,0.78)',justifyContent:'center',alignItems:'center',padding:28}} activeOpacity={1} onPress={()=>setSelectedMeal(null)}>
+          <TouchableOpacity style={{flex:1,backgroundColor:'rgba(3,10,25,0.88)',justifyContent:'center',alignItems:'center',padding:28}} activeOpacity={1} onPress={()=>setSelectedMeal(null)}>
             <TouchableWithoutFeedback onPress={e=>e.stopPropagation()}>
               <View style={{backgroundColor:C.surface,borderRadius:24,padding:24,width:'100%',borderWidth:1,borderColor:C.border}}>
                 <View style={{flexDirection:'row',alignItems:'center',gap:14,marginBottom:20}}>
@@ -1219,13 +1564,39 @@ export default function App(){
                   <Text style={{fontSize:14,color:C.muted}}>✕</Text>
                 </TouchableOpacity>
               </View>
-              <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+              <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} onScrollBeginDrag={Keyboard.dismiss}>
                 <Text style={{fontSize:13,color:C.muted,marginBottom:16,lineHeight:20}}>{t.editMealSub}</Text>
                 <Text style={{fontSize:12,color:C.muted,marginBottom:8}}>{t.currentFood}</Text>
                 <View style={{backgroundColor:C.card,borderRadius:12,padding:12,marginBottom:16,flexDirection:'row',alignItems:'center',gap:10}}>
                   <Text style={{fontSize:20}}>{editMealData.emoji||'🍽️'}</Text>
                   <Text style={{fontSize:13,color:C.muted,flex:1}}>{editMealData.name}</Text>
+                  <Text style={{fontSize:11,color:C.muted}}>{editMealData.portion||''}</Text>
                 </View>
+                {editMealData.isBarcode&&(
+                  <View style={{marginBottom:16}}>
+                    <Text style={{fontSize:12,color:C.muted,marginBottom:8}}>{lang==='en'?'Change quantity (grams):':'Cambiar cantidad (gramos):'}</Text>
+                    <View style={{flexDirection:'row',alignItems:'center',gap:10,marginBottom:8}}>
+                      <TextInput
+                        style={{flex:1,backgroundColor:C.card,borderWidth:1,borderColor:C.lime,borderRadius:14,color:C.text,fontSize:22,fontWeight:'700',padding:12,textAlign:'center'}}
+                        keyboardType="numeric"
+                        value={editMealData.newGrams||String(parseFloat(editMealData.portion)||100)}
+                        onChangeText={v=>setEditMealData(prev=>({...prev,newGrams:v}))}
+                        selectTextOnFocus
+                      />
+                      <Text style={{fontSize:16,color:C.muted}}>g</Text>
+                    </View>
+                    {editMealData.newGrams&&parseFloat(editMealData.newGrams)>0&&(
+                      <View style={{flexDirection:'row',gap:6,backgroundColor:C.surface,borderRadius:12,padding:10}}>
+                        {[{v:Math.round((editMealData.kcal100||0)*(parseFloat(editMealData.newGrams)/100)),l:'kcal',c:C.lime},{v:Math.round((editMealData.protein100||0)*(parseFloat(editMealData.newGrams)/100))+'g',l:t.prot,c:C.lime},{v:Math.round((editMealData.carbs100||0)*(parseFloat(editMealData.newGrams)/100))+'g',l:t.carbs,c:C.orange},{v:Math.round((editMealData.fat100||0)*(parseFloat(editMealData.newGrams)/100))+'g',l:t.fat,c:C.blue}].map((x,i)=>(
+                          <View key={i} style={{flex:1,alignItems:'center'}}>
+                            <Text style={{fontSize:13,fontWeight:'800',color:x.c}}>{x.v}</Text>
+                            <Text style={{fontSize:8,color:C.muted,textTransform:'uppercase'}}>{x.l}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+                  </View>
+                )}
                 <Text style={{fontSize:12,color:C.muted,marginBottom:8}}>{t.mealType}</Text>
                 <View style={{flexDirection:'row',flexWrap:'wrap',gap:8,marginBottom:16}}>
                   {MEAL_TYPES.map(mt=>(
@@ -1257,18 +1628,39 @@ export default function App(){
                 ):(
                   <>
                     <TouchableOpacity style={[s.confirmBtn,{marginTop:16}]} onPress={()=>{
-                      if(editMealData.correction?.trim()){
+                      if(editMealData.isBarcode && editMealData.newGrams && parseFloat(editMealData.newGrams)>0){
+                        // Barcode: recalculate by grams
+                        const g=parseFloat(editMealData.newGrams);
+                        const r=g/100;
+                        const mt=MEAL_TYPES.find(t=>t.id===editMealData.mealType)||MEAL_TYPES[0];
+                        const updatedMeal={kcal:Math.round(editMealData.kcal100*r),protein:Math.round(editMealData.protein100*r),carbs:Math.round(editMealData.carbs100*r),fat:Math.round(editMealData.fat100*r),portion:g+'g',mealType:editMealData.mealType,mealTypeLabel:mt.label,mealTypeIcon:mt.icon};
+                        if(editMealData.fromHistory){
+                          const hIdx=editMealData.historyIdx; const updatedH=[...history]; const updatedM=[...updatedH[hIdx].meals]; updatedM[editMealIdx]={...updatedM[editMealIdx],...updatedMeal}; const nKcal=updatedM.reduce((s,m)=>s+m.kcal,0); updatedH[hIdx]={...updatedH[hIdx],meals:updatedM,totalKcal:nKcal}; setHistory(updatedH); AsyncStorage.setItem('chistory',JSON.stringify(updatedH)).catch(()=>{});
+                        } else {
+                          const updated=[...meals]; updated[editMealIdx]={...updated[editMealIdx],...updatedMeal}; setMeals(updated); saveMeals(updated);
+                        }
+                        setShowEditMeal(false); setEditMealIdx(null); setEditMealData({});
+                      } else if(editMealData.correction?.trim()){
                         saveEditMealAI();
                       } else {
                         const mt=MEAL_TYPES.find(t=>t.id===editMealData.mealType)||MEAL_TYPES[0];
-                        const updated=[...meals];
-                        updated[editMealIdx]={...updated[editMealIdx],mealType:editMealData.mealType,mealTypeLabel:mt.label,mealTypeIcon:mt.icon};
-                        setMeals(updated); saveMeals(updated);
+                        if(editMealData.fromHistory){
+                          const hIdx=editMealData.historyIdx;
+                          const updatedH=[...history];
+                          const updatedMeals=[...updatedH[hIdx].meals];
+                          updatedMeals[editMealIdx]={...updatedMeals[editMealIdx],mealType:editMealData.mealType,mealTypeLabel:mt.label,mealTypeIcon:mt.icon};
+                          updatedH[hIdx]={...updatedH[hIdx],meals:updatedMeals};
+                          setHistory(updatedH); AsyncStorage.setItem('chistory',JSON.stringify(updatedH)).catch(()=>{});
+                        } else {
+                          const updated=[...meals];
+                          updated[editMealIdx]={...updated[editMealIdx],mealType:editMealData.mealType,mealTypeLabel:mt.label,mealTypeIcon:mt.icon};
+                          setMeals(updated); saveMeals(updated);
+                        }
                         setShowEditMeal(false); setEditMealIdx(null); setEditMealData({});
                       }
                     }}>
-                      <Text style={{fontSize:15,fontWeight:'700',color:'#0d0f14'}}>
-                        {editMealData.correction?.trim()?t.recalculate:t.save}
+                      <Text style={{fontSize:15,fontWeight:'700',color:'#060d1a'}}>
+                        {editMealData.isBarcode&&editMealData.newGrams?t.save:editMealData.correction?.trim()?t.recalculate:t.save}
                       </Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={s.cancelBtn} onPress={()=>setShowEditMeal(false)}>
@@ -1292,7 +1684,7 @@ export default function App(){
         const info = t.macroInfo[idx].replace('{goal}',m.goal);
         return (
           <Modal visible={true} animationType="fade" transparent onRequestClose={()=>setShowMacroModal(null)}>
-            <TouchableOpacity style={{flex:1,backgroundColor:'rgba(0,0,0,0.75)',justifyContent:'center',alignItems:'center',padding:28}} activeOpacity={1} onPress={()=>setShowMacroModal(null)}>
+            <TouchableOpacity style={{flex:1,backgroundColor:'rgba(3,10,25,0.88)',justifyContent:'center',alignItems:'center',padding:28}} activeOpacity={1} onPress={()=>setShowMacroModal(null)}>
               <TouchableWithoutFeedback onPress={e=>e.stopPropagation()}>
                 <View style={{backgroundColor:C.surface,borderRadius:24,padding:24,width:'100%',borderWidth:1,borderColor:m.color}}>
                   <Text style={{fontSize:20,fontWeight:'800',color:m.color,marginBottom:4}}>{t.macroDetail[idx]}</Text>
@@ -1359,7 +1751,7 @@ export default function App(){
                   AsyncStorage.setItem('csubscribed',JSON.stringify(true)).catch(()=>{});
                   setShowPaywall(false);
                 }}>
-                <Text style={{fontSize:16,fontWeight:'800',color:'#0d0f14'}}>{lang==='en'?'Subscribe for 2.99€/month':'Suscribirse por 2,99€/mes'}</Text>
+                <Text style={{fontSize:16,fontWeight:'800',color:'#060d1a'}}>{lang==='en'?'Subscribe for 2.99€/month':'Suscribirse por 2,99€/mes'}</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={()=>setShowPaywall(false)} style={{alignItems:'center',padding:12}}>
                 <Text style={{fontSize:13,color:C.muted}}>{lang==='en'?'Maybe later':'Ahora no'}</Text>
@@ -1374,7 +1766,7 @@ export default function App(){
       {/* ── CUSTOM ALERT — fuera de SafeAreaView para estar encima de Modals ── */}
       {customAlert && (
         <Modal visible={true} transparent animationType="fade">
-          <View style={{flex:1,backgroundColor:'rgba(0,0,0,0.78)',justifyContent:'center',alignItems:'center',padding:40}}>
+          <View style={{flex:1,backgroundColor:'rgba(3,10,25,0.88)',justifyContent:'center',alignItems:'center',padding:40}}>
             <View style={{backgroundColor:C.surface,borderRadius:20,padding:24,width:'100%',borderWidth:1,borderColor:C.border}}>
               <Text style={{fontSize:18,fontWeight:'700',color:C.text,textAlign:'center',marginBottom:8}}>{customAlert.title}</Text>
               <Text style={{fontSize:14,color:C.muted,textAlign:'center',lineHeight:22,marginBottom:24}}>{customAlert.message}</Text>
@@ -1385,7 +1777,7 @@ export default function App(){
                     style={{flex:customAlert.buttons.length>1?1:undefined,backgroundColor:btn.style==='destructive'?'rgba(255,92,92,0.15)':btn.style==='confirm'?C.lime:C.card,borderWidth:1,borderColor:btn.style==='destructive'?C.danger:btn.style==='confirm'?C.lime:C.border,borderRadius:14,height:46,alignItems:'center',justifyContent:'center'}}
                     onPress={()=>{ setCustomAlert(null); btn.onPress&&btn.onPress(); }}
                   >
-                    <Text style={{fontSize:15,fontWeight:'600',color:btn.style==='destructive'?C.danger:btn.style==='confirm'?'#0d0f14':C.text}}>{btn.text}</Text>
+                    <Text style={{fontSize:15,fontWeight:'600',color:btn.style==='destructive'?C.danger:btn.style==='confirm'?'#060d1a':C.text}}>{btn.text}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -1404,19 +1796,19 @@ function OnboardingModal({visible,onDone}){
   return (
     <Modal visible={visible} animationType="fade" transparent>
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View style={{flex:1,backgroundColor:"rgba(0,0,0,0.92)",justifyContent:"center",padding:24}}>
-          <View style={{backgroundColor:"#161920",borderRadius:24,padding:28,borderWidth:1,borderColor:"#2a2f3a",alignItems:'center'}}>
+        <View style={{flex:1,backgroundColor:"rgba(3,10,25,0.95)",justifyContent:"center",padding:24}}>
+          <View style={{backgroundColor:"#0d1b2e",borderRadius:24,padding:28,borderWidth:1,borderColor:"#1e3550",alignItems:'center'}}>
             <Text style={{fontSize:48,marginBottom:16}}>🥗</Text>
-            <Text style={{fontSize:24,fontWeight:"800",color:"#f0f2f5",textAlign:"center",marginBottom:8,letterSpacing:-0.5}}>Bienvenido a CaloriApp</Text>
-            <Text style={{fontSize:14,color:"#7a8494",textAlign:"center",marginBottom:32,lineHeight:22}}>Analiza tus comidas con IA y alcanza tus objetivos</Text>
+            <Text style={{fontSize:24,fontWeight:"800",color:"#e8eef8",textAlign:"center",marginBottom:8,letterSpacing:-0.5}}>Bienvenido a CaloriApp</Text>
+            <Text style={{fontSize:14,color:"#5a7a9e",textAlign:"center",marginBottom:32,lineHeight:22}}>Analiza tus comidas con IA y alcanza tus objetivos</Text>
             {[['📸','Fotos de comida'],['✏️','Descripción de recetas'],['📊','Macros y calorías'],['🎯','Objetivos personalizados']].map(([icon,txt],i)=>(
               <View key={i} style={{flexDirection:'row',alignItems:'center',gap:12,marginBottom:12,alignSelf:'flex-start'}}>
                 <Text style={{fontSize:20}}>{icon}</Text>
-                <Text style={{fontSize:14,color:'#f0f2f5'}}>{txt}</Text>
+                <Text style={{fontSize:14,color:'#e8eef8'}}>{txt}</Text>
               </View>
             ))}
-            <TouchableOpacity style={{backgroundColor:"#c6f135",borderRadius:16,height:52,alignItems:"center",justifyContent:"center",width:'100%',marginTop:20}} onPress={onDone}>
-              <Text style={{fontSize:16,fontWeight:"800",color:"#0d0f14"}}>Empezar →</Text>
+            <TouchableOpacity style={{backgroundColor:"#4d9fff",borderRadius:16,height:52,alignItems:"center",justifyContent:"center",width:'100%',marginTop:20}} onPress={onDone}>
+              <Text style={{fontSize:16,fontWeight:"800",color:"#060d1a"}}>Empezar →</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1437,11 +1829,9 @@ const s = StyleSheet.create({
   ringCard: { flexDirection:'row', alignItems:'center', backgroundColor:C.surface, borderWidth:1, borderColor:C.border, borderRadius:20, padding:24, marginHorizontal:24, marginBottom:16 },
   statsRow: { flexDirection:'row', gap:10, paddingHorizontal:24, marginBottom:20 },
   statCard: { flex:1, backgroundColor:C.surface, borderWidth:1, borderColor:C.border, borderRadius:16, padding:14, alignItems:'center' },
-  mealCard: { flexDirection:'row', backgroundColor:C.surface, borderWidth:1, borderColor:C.border, borderRadius:20, marginBottom:12, overflow:'hidden' },
-  mealImg: { width:90, height:90 },
-  mealImgPh: { width:90, height:90, backgroundColor:C.card, alignItems:'center', justifyContent:'center' },
+  mealCard: { flexDirection:'row', backgroundColor:C.surface, borderWidth:1, borderColor:C.border, borderRadius:20, marginBottom:12, overflow:'hidden', alignItems:'stretch' },
   fab: { position:'absolute', bottom:32, left:24, right:24, backgroundColor:C.lime, borderRadius:18, height:58, flexDirection:'row', alignItems:'center', justifyContent:'center' },
-  overlay: { flex:1, backgroundColor:'rgba(0,0,0,0.75)', justifyContent:'flex-end' },
+  overlay: { flex:1, backgroundColor:'rgba(3,10,25,0.88)', justifyContent:'flex-end' },
   sheet: { backgroundColor:C.surface, borderTopLeftRadius:28, borderTopRightRadius:28, padding:24, paddingBottom:40, borderWidth:1, borderColor:C.border },
   handle: { width:40, height:4, backgroundColor:C.border, borderRadius:99, alignSelf:'center', marginBottom:20 },
   sheetTitle: { fontSize:20, fontWeight:'700', color:C.text, marginBottom:6 },
