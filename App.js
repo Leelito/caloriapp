@@ -1,3 +1,4 @@
+/* eslint-disable react-native/no-unused-styles */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
@@ -249,28 +250,27 @@ export default function App(){
     Animated.timing(slideAnim,{toValue:800,duration:250,useNativeDriver:true}).start(()=>setShowHistory(false));
   }
   const [customAlert,setCustomAlert]=useState(null);
-  // customAlert = { title, message, buttons: [{text, onPress, style}] }
   function showAlert(title, message, buttons){
     setCustomAlert({title, message, buttons: buttons||[{text:'OK'}]});
   }
   const [obKey,setObKey]=useState('');
   const [showAdd,setShowAdd]=useState(false);
-  const [mealType,setMealType]=useState(null);         // selected meal type
-  const [showEditMeal,setShowEditMeal]=useState(false); // edit meal modal
-  const [editMealIdx,setEditMealIdx]=useState(null);    // index of meal being edited
-  const [editMealData,setEditMealData]=useState({});    // form data for edit
-  const [expandedEntry,setExpandedEntry]=useState(null);// expanded history entry idx
-  const [selectedMeal,setSelectedMeal]=useState(null); // meal detail popup
+  const [mealType,setMealType]=useState(null);
+  const [showEditMeal,setShowEditMeal]=useState(false);
+  const [editMealIdx,setEditMealIdx]=useState(null);
+  const [editMealData,setEditMealData]=useState({});
+  const [expandedEntry,setExpandedEntry]=useState(null);
+  const [selectedMeal,setSelectedMeal]=useState(null);
   const [lang,setLang]=useState('es');
   const [darkMode,setDarkMode]=useState(true);
   const C=darkMode?DARK:LIGHT;
   const s=getStyles(C);
   const [isSubscribed,setIsSubscribed]=useState(false);
   const [showPaywall,setShowPaywall]=useState(false);
-  const [showMacroModal,setShowMacroModal]=useState(null); // 'protein'|'carbs'|'fat'
+  const [showMacroModal,setShowMacroModal]=useState(null);
   const [dailyAnalyses,setDailyAnalyses]=useState(0);
-  const DAILY_LIMIT=10;
-  const isDev=devCode.length>0; // verified by backend
+  const DAILY_LIMIT=15;
+  const isDev=devCode.length>0;
   function isUnlimited(){ return isDev; }
   const t=TR[lang]||TR.es;
   const MODES=getMODES(t);
@@ -283,18 +283,17 @@ export default function App(){
   const [barcodeProduct,setBarcodeProduct]=useState(null);
   const [barcodeGrams,setBarcodeGrams]=useState('100');
   const [editingResult,setEditingResult]=useState(false);
-  const [quantityMode,setQuantityMode]=useState('portions'); // 'portions'|'grams'
+  const [quantityMode,setQuantityMode]=useState('portions');
   const [portions,setPortions]=useState(1);
   const [customGrams,setCustomGrams]=useState('');
   const [expandedDescs,setExpandedDescs]=useState({});
-  const [addPrevStep,setAddPrevStep]=useState('photo'); // 'photo'|'text'
-  const [addStep,setAddStep]=useState('upload'); // upload | analyzing | result | error
+  const [addPrevStep,setAddPrevStep]=useState('photo');
+  const [addStep,setAddStep]=useState('upload');
   const [pendingMeal,setPendingMeal]=useState(null);
   const [pendingImg,setPendingImg]=useState(null);
   const [errorMsg,setErrorMsg]=useState('');
   const [recipeText,setRecipeText]=useState('');
 
-  // Settings form state
   const [fSex,setFSex]=useState('m');
   const [fAge,setFAge]=useState('');
   const [fWeight,setFWeight]=useState('');
@@ -305,13 +304,11 @@ export default function App(){
   const [fDevCode,setFDevCode]=useState('');
   const [devCodeError,setDevCodeError]=useState(false);
 
-  // Load data
   useEffect(()=>{
     (async()=>{
       try{
         const p=await AsyncStorage.getItem('cprofile');
         if(p) setProfile(JSON.parse(p));
-        // devCode always resets on app open - intentionally not loaded from storage
         const m=await AsyncStorage.getItem('cmeals_today');
         if(m){ const d=JSON.parse(m); if(d.date===todayKey()) setMeals(d.meals); }
         const sub=await AsyncStorage.getItem('csubscribed');
@@ -332,6 +329,8 @@ export default function App(){
           AsyncStorage.setItem('chistory',JSON.stringify(migrated)).catch(()=>{});
         }
         const launched=await AsyncStorage.getItem('claunched');
+        const dm=await AsyncStorage.getItem('cdarkmode');
+        if(dm!==null) setDarkMode(dm==='true');
         if(!launched){ setTimeout(()=>setShowOnboarding(true),600); AsyncStorage.setItem('claunched','1').catch(()=>{}); }
         else if(!p) setTimeout(()=>openSettings(),600);
       }catch(e){ console.log('Load error',e); }
@@ -341,7 +340,6 @@ export default function App(){
 
   const saveMeals=(m)=>{ AsyncStorage.setItem('cmeals_today',JSON.stringify({date:todayKey(),meals:m})).catch(()=>{}); };
 
-  // Auto-reset at midnight if app stays open
   useEffect(()=>{
     const checkMidnight=()=>{
       const now=new Date();
@@ -349,7 +347,7 @@ export default function App(){
       return setTimeout(()=>{
         setDailyAnalyses(0);
         AsyncStorage.setItem('cdaily_analyses',JSON.stringify({date:todayKey(),count:0})).catch(()=>{});
-        timerRef.current=checkMidnight(); // schedule next day
+        timerRef.current=checkMidnight();
       }, msUntilMidnight);
     };
     timerRef.current=checkMidnight();
@@ -358,7 +356,6 @@ export default function App(){
   const saveProfile=(p)=>{ AsyncStorage.setItem('cprofile',JSON.stringify(p)).catch(()=>{}); };
   const saveHistory=(h)=>{ AsyncStorage.setItem('chistory',JSON.stringify(h)).catch(()=>{}); };
 
-  // Build last 7 days chart data
   function getWeeklyData(){
     const days=[];
     const dayNames=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
@@ -499,12 +496,11 @@ export default function App(){
     setFHeight(profile.height?String(profile.height):'');
     setFActivity(profile.activity||1.55);
     setFMode(profile.mode||'maint');
-    setFDevCode(devCode||'');
+    setFDevCode('');
     setShowSettings(true);
   }
 
   async function saveSettings(){
-    // Validate dev code via backend (never in client)
     setDevCodeError(false);
     const p={sex:fSex,age:parseInt(fAge)||0,weight:parseFloat((fWeight||'0').replace(',','.'))||0,targetWeight:parseFloat((fTargetWeight||'0').replace(',','.'))||0,height:parseFloat((fHeight||'0').replace(',','.'))||0,activity:fActivity,mode:fMode};
     if(fDevCode && fDevCode.length>0){
@@ -514,7 +510,7 @@ export default function App(){
         if(json.valid){ setDevCode(fDevCode); }
         else { setDevCodeError(true); return; }
       }catch(e){ setDevCodeError(true); return; }
-    } else { setDevCode(''); }
+    } else if(!isDev) { setDevCode(''); }
     AsyncStorage.setItem('cdarkmode',String(darkMode)).catch(()=>{});
     setProfile(p); saveProfile(p);
     setShowSettings(false);
@@ -547,7 +543,6 @@ export default function App(){
   }
 
   async function callAnthropic(body, retries=3){
-    // Generate a unique userId — dev mode if key starts with sk-ant-dev
     const storedId = await AsyncStorage.getItem('cuserid').catch(()=>null);
     let uid = storedId;
     if(!uid){ uid='user-'+Math.random().toString(36).slice(2,14); AsyncStorage.setItem('cuserid',uid).catch(()=>{}); }
@@ -599,7 +594,6 @@ export default function App(){
       const p=json.product;
       const n=p.nutriments||{};
       const name=(p.product_name||p.product_name_es||p.product_name_en||'Producto').slice(0,40);
-      // energy can be in kJ - convert: 1 kcal = 4.184 kJ
       const kcal100=n['energy-kcal_100g']||n['energy-kcal']||
         (n['energy-kj_100g']||n['energy-kj']||n['energy_100g']||n.energy||0)/4.184;
       const protein100=n.proteins_100g||n['proteins-dry-matter_100g']||n.proteins||0;
@@ -689,7 +683,6 @@ export default function App(){
   function confirmMeal(){
     if(!pendingMeal) return;
     let meal={...pendingMeal};
-    // Apply quantity multiplier
     if(!meal.fromText){
       if(quantityMode==='portions' && portions>1){
         const p=portions;
@@ -938,17 +931,16 @@ export default function App(){
 
       {/* ── ADD MODAL ─────────────────────────────────────── */}
       <Modal visible={showAdd} animationType="slide" transparent={false} onRequestClose={()=>{setShowAdd(false);resetAdd();setEditingEntryIdx(null);}} hardwareAccelerated={true}>
-        <KeyboardAvoidingView behavior={Platform.OS==='ios'?'padding':'height'} style={{flex:1,backgroundColor:C.surface}}>
-          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-            <View style={{flex:1,padding:24,paddingTop:Platform.OS==='ios'?60:40}}>
-              <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
-                <View style={{width:40,height:4,backgroundColor:C.border,borderRadius:99}}/>
-                <TouchableOpacity onPress={()=>{setShowAdd(false);resetAdd();setEditingEntryIdx(null);}}>
-                  <Text style={{fontSize:14,color:C.muted}}>✕</Text>
-                </TouchableOpacity>
-              </View>
+        <KeyboardAvoidingView behavior={Platform.OS==='ios'?'padding':'height'} style={{flex:1,backgroundColor:C.surface}} keyboardVerticalOffset={Platform.OS==='ios'?44:0}>
+          <View style={{flex:1}}>
+            <View style={{paddingHorizontal:24,paddingTop:Platform.OS==='ios'?60:40,flexDirection:'row',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+              <View style={{width:40,height:4,backgroundColor:C.border,borderRadius:99}}/>
+              <TouchableOpacity onPress={()=>{setShowAdd(false);resetAdd();setEditingEntryIdx(null);}}>
+                <Text style={{fontSize:14,color:C.muted}}>✕</Text>
+              </TouchableOpacity>
+            </View>
 
-              <ScrollView keyboardShouldPersistTaps="always" showsVerticalScrollIndicator={false}>
+            <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" showsVerticalScrollIndicator={false} contentContainerStyle={{paddingHorizontal:24,paddingBottom:40}}>
               {addStep==='upload' && (
                 <>
                   {editingEntryIdx!==null && (
@@ -1074,7 +1066,6 @@ export default function App(){
                     />
                     <Text style={{fontSize:18,color:C.muted}}>g</Text>
                   </View>
-
                   {barcodeGrams&&parseFloat(barcodeGrams)>0&&(
                     <View style={{backgroundColor:C.surface,borderRadius:12,padding:12,marginBottom:16,flexDirection:'row',justifyContent:'space-around'}}>
                       {[{v:Math.round(barcodeProduct.kcal100*(parseFloat(barcodeGrams)/100)),l:'kcal',c:C.lime},{v:Math.round(barcodeProduct.protein100*(parseFloat(barcodeGrams)/100))+'g',l:t.protein,c:C.lime},{v:Math.round(barcodeProduct.carbs100*(parseFloat(barcodeGrams)/100))+'g',l:t.carbs,c:C.orange},{v:Math.round(barcodeProduct.fat100*(parseFloat(barcodeGrams)/100))+'g',l:t.fat,c:C.blue}].map((x,i)=>(
@@ -1132,7 +1123,6 @@ export default function App(){
                       ))}
                     </View>
                   </View>
-                  {/* QUANTITY SELECTOR - not for text */}
                   {!pendingMeal?.fromText&&<View style={{backgroundColor:C.card,borderRadius:16,padding:14,marginBottom:14}}>
                     <Text style={{fontSize:12,color:C.muted,marginBottom:10}}>{lang==='en'?'Adjust quantity:':'Ajustar cantidad:'}</Text>
                     <View style={{flexDirection:'row',gap:6,marginBottom:12}}>
@@ -1216,13 +1206,12 @@ export default function App(){
                   </TouchableOpacity>
                 </>
               )}
-              </ScrollView>
-            </View>
-          </TouchableWithoutFeedback>
+            </ScrollView>
+          </View>
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* ── HISTORY PANEL — Animated, no Modal para no bloquear alerts ── */}
+      {/* ── HISTORY PANEL ── */}
       {showHistory && (
         <View style={{position:'absolute',top:0,left:0,right:0,bottom:0,zIndex:50}}>
           <TouchableWithoutFeedback onPress={closeHistory}>
@@ -1252,7 +1241,6 @@ export default function App(){
                   const isExpanded = expandedEntry===i;
                   return (
                     <View key={i} style={{backgroundColor:C.card,borderRadius:18,marginBottom:12,borderWidth:1,borderColor:isExpanded?mode.color:C.border,overflow:'hidden'}}>
-                      {/* HEADER — toca para expandir */}
                       <TouchableOpacity onPress={()=>setExpandedEntry(isExpanded?null:i)} activeOpacity={0.8} style={{padding:18}}>
                         <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'flex-start',marginBottom:10}}>
                           <View style={{flex:1}}>
@@ -1285,7 +1273,6 @@ export default function App(){
                         </View>
                       </TouchableOpacity>
 
-                      {/* DETALLE — visible solo si expandido */}
                       {isExpanded && (
                         <View style={{borderTopWidth:1,borderTopColor:C.border,paddingHorizontal:18,paddingBottom:18}}>
                           <Text style={{fontSize:11,color:C.muted,textTransform:'uppercase',letterSpacing:0.6,marginTop:14,marginBottom:10}}>{t.foodList}</Text>
@@ -1358,18 +1345,16 @@ export default function App(){
 
       {/* ── SETTINGS MODAL ─────────────────────────────────── */}
       <Modal visible={showSettings} animationType="slide" transparent onRequestClose={()=>setShowSettings(false)}>
+        <KeyboardAvoidingView behavior={Platform.OS==='ios'?'padding':'height'} style={{flex:1}} keyboardVerticalOffset={Platform.OS==='ios'?44:0}>
         <TouchableOpacity style={s.overlay} activeOpacity={1} onPress={()=>setShowSettings(false)}>
           <View style={[s.sheet,{maxHeight:'95%'}]} onStartShouldSetResponder={()=>true} onTouchEnd={e=>e.stopPropagation()}>
             <TouchableOpacity activeOpacity={1} onPress={()=>setShowSettings(false)} style={{alignItems:'center',paddingBottom:4}}>
               <View style={s.handle}/>
             </TouchableOpacity>
-            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" onScrollBeginDrag={Keyboard.dismiss}>
+            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive">
               <Text style={s.sheetTitle}>{t.profileTitle}</Text>
               <Text style={{fontSize:13,color:C.muted,marginBottom:20,lineHeight:20}}>{t.profileSub}</Text>
 
-
-
-              {/* DATOS */}
               <Text style={s.secTitle}>{t.personalData}</Text>
               <View style={s.fieldRow}>
                 <Text style={s.fieldLabel}>{t.sex}</Text>
@@ -1388,7 +1373,6 @@ export default function App(){
                 </View>
               ))}
 
-              {/* ACTIVIDAD */}
               <Text style={s.secTitle}>{t.activity}</Text>
               <View style={{backgroundColor:C.card,borderRadius:14,padding:8,marginBottom:20}}>
                 {ACTIVITY.map(a=>(
@@ -1399,7 +1383,6 @@ export default function App(){
                 ))}
               </View>
 
-              {/* TDEE */}
               {formProfile.weight>0 && formProfile.height>0 && formProfile.age>0 && (
                 <View style={{backgroundColor:C.card,borderRadius:14,padding:16,marginBottom:20,flexDirection:'row',justifyContent:'space-between',alignItems:'center'}}>
                   <View>
@@ -1413,7 +1396,6 @@ export default function App(){
                 </View>
               )}
 
-              {/* MODOS */}
               <Text style={s.secTitle}>{t.chooseMode}</Text>
               {MODES.map(m=>{
                 const kcal=formProfile.weight>0&&formProfile.height>0&&formProfile.age>0?Math.max(1000,formTDEE+m.delta):null;
@@ -1444,10 +1426,7 @@ export default function App(){
                 );
               })}
 
-
-              {/* LANGUAGE */}
               <View style={{marginBottom:20}}>
-                {/* APPEARANCE */}
                 <Text style={s.secTitle}>{lang==='en'?'Appearance':'Apariencia'}</Text>
                 <View style={[s.fieldRow,{marginBottom:20,alignItems:'center'}]}>
                   <Text style={s.fieldLabel}>{lang==='en'?'Dark mode':'Modo oscuro'}</Text>
@@ -1474,7 +1453,6 @@ export default function App(){
                 </View>
               </View>
 
-              {/* DEV CODE */}
               <View style={{marginBottom:20}}>
                 <Text style={s.secTitle}>{lang==='en'?'Developer':'Desarrollador'}</Text>
                 <Text style={{fontSize:13,color:C.muted,marginBottom:10}}>{lang==='en'?'Code':'Código'}</Text>
@@ -1482,8 +1460,8 @@ export default function App(){
                   style={s.input}
                   value={fDevCode}
                   onChangeText={v=>{setFDevCode(v);setDevCodeError(false);}}
-                  placeholder={lang==='en'?'Enter dev code':'Introduce el código'}
-                  placeholderTextColor={C.muted}
+                  placeholder={isDev?(lang==='en'?'Code active — enter new to change':'Código activo — escribe uno nuevo para cambiar'):(lang==='en'?'Enter dev code':'Introduce el código')}
+                  placeholderTextColor={isDev?C.lime:C.muted}
                   secureTextEntry
                   autoCapitalize="none"
                 />
@@ -1501,6 +1479,7 @@ export default function App(){
             </ScrollView>
           </View>
         </TouchableOpacity>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* ── MEAL DETAIL MODAL ─────────────────────────────── */}
@@ -1557,16 +1536,15 @@ export default function App(){
 
       {/* ── EDIT MEAL MODAL ─────────────────────────────────── */}
       <Modal visible={showEditMeal} animationType="slide" transparent={false} onRequestClose={()=>setShowEditMeal(false)}>
-        <KeyboardAvoidingView behavior={Platform.OS==='ios'?'padding':'height'} style={{flex:1,backgroundColor:C.surface}}>
-          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-            <View style={{flex:1,padding:24,paddingTop:Platform.OS==='ios'?60:40}}>
-              <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
-                <Text style={s.sheetTitle}>{t.editMeal}</Text>
-                <TouchableOpacity onPress={()=>setShowEditMeal(false)}>
-                  <Text style={{fontSize:14,color:C.muted}}>✕</Text>
-                </TouchableOpacity>
-              </View>
-              <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} onScrollBeginDrag={Keyboard.dismiss}>
+        <KeyboardAvoidingView behavior={Platform.OS==='ios'?'padding':'height'} style={{flex:1,backgroundColor:C.surface}} keyboardVerticalOffset={Platform.OS==='ios'?44:0}>
+          <View style={{flex:1}}>
+            <View style={{paddingHorizontal:24,paddingTop:Platform.OS==='ios'?60:40,flexDirection:'row',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
+              <Text style={s.sheetTitle}>{t.editMeal}</Text>
+              <TouchableOpacity onPress={()=>setShowEditMeal(false)}>
+                <Text style={{fontSize:14,color:C.muted}}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" showsVerticalScrollIndicator={false} contentContainerStyle={{paddingHorizontal:24,paddingBottom:40}}>
                 <Text style={{fontSize:13,color:C.muted,marginBottom:16,lineHeight:20}}>{t.editMealSub}</Text>
                 <Text style={{fontSize:12,color:C.muted,marginBottom:8}}>{t.currentFood}</Text>
                 <View style={{backgroundColor:C.card,borderRadius:12,padding:12,marginBottom:16,flexDirection:'row',alignItems:'center',gap:10}}>
@@ -1631,7 +1609,6 @@ export default function App(){
                   <>
                     <TouchableOpacity style={[s.confirmBtn,{marginTop:16}]} onPress={()=>{
                       if(editMealData.isBarcode && editMealData.newGrams && parseFloat(editMealData.newGrams)>0){
-                        // Barcode: recalculate by grams
                         const g=parseFloat(editMealData.newGrams);
                         const r=g/100;
                         const mt=MEAL_TYPES.find(t=>t.id===editMealData.mealType)||MEAL_TYPES[0];
@@ -1672,8 +1649,7 @@ export default function App(){
                 )}
                 <View style={{height:32}}/>
               </ScrollView>
-            </View>
-          </TouchableWithoutFeedback>
+          </View>
         </KeyboardAvoidingView>
       </Modal>
 
@@ -1727,7 +1703,6 @@ export default function App(){
                   {lang==='en'?'Analyze unlimited meals with AI. Track your macros and reach your goals.':'Analiza comidas ilimitadas con IA. Controla tus macros y alcanza tus objetivos.'}
                 </Text>
               </View>
-              {/* Features */}
               <View style={{gap:12,marginBottom:28}}>
                 {(lang==='en'?['📸 Analyze photos with AI','✏️ Describe any meal','📊 Macros & calories tracking','🎯 Personalized calorie goals','📋 Full history & progress']:['📸 Analiza fotos con IA','✏️ Describe cualquier comida','📊 Control de macros y calorías','🎯 Objetivo calórico personalizado','📋 Historial completo y progreso']).map((f,i)=>(
                   <View key={i} style={{flexDirection:'row',alignItems:'center',gap:10}}>
@@ -1738,22 +1713,19 @@ export default function App(){
                   </View>
                 ))}
               </View>
-              {/* Price */}
               <View style={{backgroundColor:C.card,borderRadius:16,padding:16,marginBottom:20,alignItems:'center',borderWidth:1,borderColor:C.lime}}>
                 <Text style={{fontSize:13,color:C.muted,marginBottom:4}}>{lang==='en'?'Monthly subscription':'Suscripción mensual'}</Text>
-                <Text style={{fontSize:36,fontWeight:'800',color:C.lime,fontStyle:'italic',letterSpacing:-1}}>2,99€<Text style={{fontSize:14,fontWeight:'400',color:C.muted,fontStyle:'normal'}}>/mes</Text></Text>
+                <Text style={{fontSize:36,fontWeight:'800',color:C.lime,fontStyle:'italic',letterSpacing:-1}}>3,99€<Text style={{fontSize:14,fontWeight:'400',color:C.muted,fontStyle:'normal'}}>/mes</Text></Text>
                 <Text style={{fontSize:11,color:C.muted,marginTop:4}}>{lang==='en'?'Cancel anytime':'Cancela cuando quieras'}</Text>
               </View>
-              {/* Subscribe button — in production this triggers RevenueCat */}
               <TouchableOpacity
                 style={{backgroundColor:C.lime,borderRadius:16,height:54,alignItems:'center',justifyContent:'center',marginBottom:12}}
                 onPress={()=>{
-                  // TODO: Replace with RevenueCat purchase when compiled
                   setIsSubscribed(true);
                   AsyncStorage.setItem('csubscribed',JSON.stringify(true)).catch(()=>{});
                   setShowPaywall(false);
                 }}>
-                <Text style={{fontSize:16,fontWeight:'800',color:'#060d1a'}}>{lang==='en'?'Subscribe for 2.99€/month':'Suscribirse por 2,99€/mes'}</Text>
+                <Text style={{fontSize:16,fontWeight:'800',color:'#060d1a'}}>{lang==='en'?'Subscribe for 3.99€/month':'Suscribirse por 3,99€/mes'}</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={()=>setShowPaywall(false)} style={{alignItems:'center',padding:12}}>
                 <Text style={{fontSize:13,color:C.muted}}>{lang==='en'?'Maybe later':'Ahora no'}</Text>
@@ -1765,7 +1737,7 @@ export default function App(){
 
       <OnboardingModal visible={showOnboarding} onDone={()=>{ setShowOnboarding(false); setTimeout(openSettings,400); }}/>
     </SafeAreaView>
-      {/* ── CUSTOM ALERT — fuera de SafeAreaView para estar encima de Modals ── */}
+      {/* ── CUSTOM ALERT ── */}
       {customAlert && (
         <Modal visible={true} transparent animationType="fade">
           <View style={{flex:1,backgroundColor:'rgba(3,10,25,0.88)',justifyContent:'center',alignItems:'center',padding:40}}>
@@ -1790,9 +1762,6 @@ export default function App(){
     </View>
   );
 }
-
-
-
 
 function OnboardingModal({visible,onDone}){
   return (
