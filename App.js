@@ -1,10 +1,10 @@
 /* eslint-disable react-native/no-unused-styles */
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Modal, TextInput, Image, Alert, Dimensions, Platform,
+  Modal, TextInput, Image, Platform,
   StatusBar, KeyboardAvoidingView, ActivityIndicator,
-  SafeAreaView, FlatList, TouchableWithoutFeedback, Keyboard, Animated
+  SafeAreaView, TouchableWithoutFeedback, Keyboard, Animated
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
@@ -522,7 +522,7 @@ export default function App(){
   async function pickImage(){
     const { status }=await ImagePicker.requestMediaLibraryPermissionsAsync();
     if(status!=='granted'){ showAlert('Permiso necesario','Necesitamos acceso a tu galería'); return; }
-    const result=await ImagePicker.launchImageLibraryAsync({ mediaTypes:ImagePicker.MediaTypeOptions.Images, base64:false, quality:0.5 });
+    const result=await ImagePicker.launchImageLibraryAsync({ mediaTypes:'images', base64:false, quality:0.5 });
     if(!result.canceled && result.assets[0]){ analyzeImage(result.assets[0]); }
   }
 
